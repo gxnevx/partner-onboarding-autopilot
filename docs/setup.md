@@ -19,7 +19,7 @@ pnpm exec clasp login
 Create a new standalone Apps Script project and push the source:
 
 ```bash
-pnpm exec clasp create-script --title "Partner Onboarding Autopilot" --type webapp --rootDir src
+pnpm exec clasp create-script --title "Partner Onboarding Autopilot" --type standalone --rootDir src
 pnpm run clasp:push
 ```
 

@@ -4,6 +4,8 @@ A working Google Apps Script prototype that turns a partner approval into a revi
 
 The exercise asks for the logic behind the automation and the message strategy. This implementation keeps those two things visible: Google Sheets is the simulated operational source, Apps Script detects activation events and generates drafts, and the web app gives an operator a clear place to review the result.
 
+[Open the live demo](https://script.google.com/macros/s/AKfycbxdFvDc9Y8aTDCJowWKpH2dyBqKkL3bO-Zp0x61E59_4xTV3P0fcQJ4X6VLoFQX40KP9A/exec)
+
 ![Email review workspace](docs/assets/email-review.png)
 
 ## What the prototype demonstrates
@@ -76,7 +78,7 @@ The local preview uses `dev/mock-state.json`; it exercises the same HTML/CSS/JS 
 
 ```bash
 pnpm exec clasp login
-pnpm exec clasp create-script --title "Partner Onboarding Autopilot" --type webapp --rootDir src
+pnpm exec clasp create-script --title "Partner Onboarding Autopilot" --type standalone --rootDir src
 pnpm run clasp:push
 ```
 
