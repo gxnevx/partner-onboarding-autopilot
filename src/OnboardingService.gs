@@ -141,13 +141,15 @@ function processEnrollment_(enrollment, program, source) {
     });
 
     replaceChildRows_('drafts', 'event_key', eventKey, drafts);
+    const generationMethod = drafts[0].generation_method || 'TEMPLATE';
+    const generationModel = drafts[0].generation_model || '';
     appendRow_('log', {
       event_key: eventKey,
       enrollment_id: enrollment.enrollment_id,
       program_id: enrollment.program_id,
       source,
       result: 'DRAFTED',
-      message: `${drafts.length} drafts created`,
+      message: `${drafts.length} drafts created via ${generationMethod}${generationModel ? ` (${generationModel})` : ''}`,
       processed_at: nowIso_(),
     });
 
@@ -155,6 +157,8 @@ function processEnrollment_(enrollment, program, source) {
       eventKey,
       result: 'DRAFTED',
       draftCount: drafts.length,
+      generationMethod,
+      generationModel,
     };
   } catch (error) {
     appendRow_('log', {
@@ -195,9 +199,88 @@ function approveDraft(draftId) {
       throw new Error(`Draft not found: ${draftId}`);
     }
 
-    draft.review_status = REVIEW_STATUS.approved;
-    draft.updated_at = nowIso_();
+    const timestamp = nowIso_();
+    draft.review_status = REVIEW_STATUS.sent;
+    draft.sent_at = timestamp;
+    draft.updated_at = timestamp;
     upsertRow_('drafts', 'draft_id', draft);
+    return buildAppState_();
+  });
+}
+
+function deleteDraft(draftId) {
+  return withScriptLock_(() => {
+    const draft = findById_('drafts', 'draft_id', draftId);
+    if (!draft) {
+      throw new Error(`Draft not found: ${draftId}`);
+    }
+
+    deleteRowById_('drafts', 'draft_id', draftId);
+    return buildAppState_();
+  });
+}
+
+function regenerateDraft(draftId) {
+  return withScriptLock_(() => {
+    const draft = findById_('drafts', 'draft_id', draftId);
+    if (!draft) {
+      throw new Error(`Draft not found: ${draftId}`);
+    }
+
+    const enrollment = findById_(
+      'enrollments',
+      'enrollment_id',
+      draft.enrollment_id,
+    );
+    const partner = findById_('partners', 'partner_id', draft.partner_id);
+    const program = findById_('programs', 'program_id', draft.program_id);
+    if (!enrollment || !partner || !program) {
+      throw new Error('The draft context is incomplete.');
+    }
+
+    const tier = readRows_('tiers').find(
+      row =>
+        row.program_id === program.program_id &&
+        row.tier_name === enrollment.tier,
+    );
+    const resources = readRows_('resources').filter(
+      row => row.program_id === program.program_id,
+    );
+    const sequence = readRows_('sequence')
+      .filter(row => row.program_id === program.program_id)
+      .sort((left, right) => Number(left.day) - Number(right.day));
+    const strategy = sequence.find(
+      item => Number(item.day) === Number(draft.day),
+    );
+    if (!strategy) {
+      throw new Error(`Missing strategy for Day ${draft.day}.`);
+    }
+
+    const generation = generateAiEmailForDay_(
+      {
+        enrollment,
+        partner,
+        program,
+        tier,
+        resources,
+        sequence,
+      },
+      Number(draft.day),
+    );
+    const timestamp = nowIso_();
+
+    draft.key_message = strategy.key_message;
+    draft.desired_outcome = strategy.desired_outcome;
+    draft.subject = generation.email.subject;
+    draft.body = generation.email.body;
+    draft.generation_method = generation.method;
+    draft.generation_model = generation.model;
+    draft.generation_note = generation.note;
+    draft.review_status = REVIEW_STATUS.draft;
+    draft.sent_at = '';
+    draft.updated_at = timestamp;
+    upsertRow_('drafts', 'draft_id', draft);
+
     return buildAppState_();
   });
 }

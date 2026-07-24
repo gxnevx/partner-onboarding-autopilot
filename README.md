@@ -4,9 +4,9 @@
 
 A working Google Apps Script prototype that turns a partner approval into a reviewable Day 0 / Day 3 / Day 7 onboarding sequence.
 
-The exercise asks for the logic behind the automation and the message strategy. This implementation keeps those two things visible: Google Sheets is the simulated operational source, Apps Script detects activation events and generates drafts, and the web app gives an operator a clear place to review the result.
+The exercise asks for the logic behind the automation and the message strategy. This implementation keeps those two things visible: Google Sheets is the simulated operational source, Apps Script detects activation events, and OpenAI turns a human-authored sequence blueprint into personalized drafts. The web app keeps every draft reviewable before sending.
 
-[Open the live demo](https://script.google.com/macros/s/AKfycbyAssT3UF60uUIAwCse37_BAdnrb_ryXRoQR18wpkumnlb79VGodgBW9MUsGxxRHUwCpQ/exec)
+[Open the live demo](https://script.google.com/macros/s/AKfycbzI5dO4qsS2COz1ZUlura9qmhrS8s_ajkS7dKuwC7OVgPpRzEBMjbowkZKpySELQfatpw/exec)
 
 ![Email review workspace](docs/assets/email-review.png)
 
@@ -18,18 +18,21 @@ The exercise asks for the logic behind the automation and the message strategy. 
 - `MANUAL` programs place the activation in a review queue before drafting.
 - Every activation event is idempotent: the same enrollment/status-change date cannot create duplicate sequences.
 - Program details, commission tiers, resources, brand voice, and sequence strategy are editable.
+- A human defines the goal, key message, and desired outcome for each touchpoint.
+- OpenAI writes the subjects and bodies from those strategic constraints plus the partner and program context.
+- Structured Outputs enforces a Day 0 / Day 3 / Day 7 response shape; deterministic templates remain as a visible fallback.
 - Partners can be added, archived, and approved for different programs and tiers.
 - Generated emails have a realistic preview plus an explicit key message and desired outcome.
-- Drafts remain human-reviewable. This prototype deliberately does not send email.
+- Drafts remain human-reviewable: edit, regenerate one touchpoint, delete it, or approve it. Approval records a simulated `SENT` state; no real email is delivered.
 
 ## Product walkthrough
 
 The web app has four separate work areas:
 
 1. **Activations** — monitor the trigger, switch Auto/Manual processing, run a scan, and simulate a Pending → Active transition.
-2. **Programs** — manage the context that drives generated content: voice, tracking template, tiers, resources, and Day 0/3/7 goals.
+2. **Programs** — manage the source context and human-authored AI brief: voice, tiers, resources, goals, key messages, and desired outcomes.
 3. **Partners** — manage partner records and program-specific memberships.
-4. **Email Reviews** — inspect the full sequence, switch between days, validate personalization, edit, and approve drafts.
+4. **Email Reviews** — inspect the full sequence, switch between days, validate personalization, edit or regenerate one email, delete a draft, and approve it into a simulated `SENT` state.
 
 ![Activation control center](docs/assets/activations.png)
 
@@ -38,9 +41,11 @@ The web app has four separate work areas:
 1. Open **Activations** and leave Ledgerly in **Automatic** mode.
 2. Choose a partner whose enrollment is `PENDING`.
 3. Confirm the commission tier.
-4. Click **Approve partner and run workflow**.
-5. The enrollment changes to `ACTIVE`, three drafts are created, and the app opens **Email Reviews** on Day 0.
-6. To repeat the demo, return to **Activations** and click **Reset selected partner to Pending** before approving again.
+4. Click **Approve partner and generate with AI**.
+5. The enrollment changes to `ACTIVE`, Apps Script sends the strategic brief to OpenAI, three drafts are created, and the app opens **Email Reviews** on Day 0.
+6. In **Email Reviews**, use **Regenerate this email** to rewrite only the selected day without changing the strategy or the other two emails.
+7. Click **Approve & send** to record the simulated `SENT` state, or delete a draft while leaving the rest of the sequence intact.
+8. To repeat the demo, return to **Activations** and click **Reset selected partner to Pending** before approving again.
 
 In **Manual** mode, step 4 adds the activation to the queue instead. The operator must click **Generate drafts** before the sequence is created.
 
@@ -54,9 +59,11 @@ flowchart LR
     G["Program configuration"] --> E
     E -->|"Pending → Active"| S["Activation scanner"]
     S --> M{"Program mode"}
-    M -->|"Auto"| D["Generate Day 0 / 3 / 7 drafts"]
+    M -->|"Auto"| B["Build strategic brief"]
     M -->|"Manual"| Q["Await operator approval"]
-    Q --> D
+    Q --> B
+    B --> A["OpenAI structured generation"]
+    A --> D["Day 0 / 3 / 7 drafts"]
     D --> R["Human review"]
 ```
 
@@ -72,12 +79,15 @@ That separation lets one partner participate in multiple client programs with di
 
 The sequence moves from **access → first action → confident positioning**. More detail is in [docs/email-strategy.md](docs/email-strategy.md).
 
+The key message is not another piece of email copy. It is the one idea the partner should retain after reading the email. The operator writes it and supplies it to OpenAI as a strategic constraint; the model writes the actual subject and body.
+
 ## Local development
 
 Requirements:
 
 - Node.js 20+
 - a Google account for Apps Script deployment
+- an OpenAI API key for live AI generation
 
 ```bash
 pnpm install
@@ -100,9 +110,12 @@ To connect an existing Apps Script project instead, copy `.clasp.example.json` t
 In the Apps Script editor:
 
 1. Run `setupDemoSpreadsheet()` once and authorize it.
-2. Run `installScheduledTrigger()` once to create the five-minute scanner.
-3. Deploy → New deployment → Web app.
-4. Execute as yourself and choose the access level appropriate for the demo.
+2. Add `OPENAI_API_KEY` to **Project Settings → Script Properties**. Optionally set `OPENAI_MODEL`; the default is `gpt-5-mini`.
+3. Run `installScheduledTrigger()` once to create the five-minute scanner.
+4. Deploy → New deployment → Web app.
+5. Execute as yourself and choose the access level appropriate for the demo.
+
+The API key is read only on the Apps Script server. It is never returned to the browser or committed to Git.
 
 See [docs/setup.md](docs/setup.md) for the full setup and demo path.
 
@@ -114,7 +127,8 @@ src/
   SetupService.gs         Sheet creation and exercise seed data
   Repository.gs           Sheet persistence helpers
   OnboardingService.gs    Detection, idempotency, and draft workflow
-  EmailGenerator.gs       Deterministic Day 0 / 3 / 7 generation
+  OpenAiService.gs        Responses API and structured output validation
+  EmailGenerator.gs       Draft assembly and deterministic fallback
   ProgramService.gs       Program configuration operations
   PartnerService.gs       Partner and enrollment operations
   TriggerService.gs       Five-minute scheduled scan

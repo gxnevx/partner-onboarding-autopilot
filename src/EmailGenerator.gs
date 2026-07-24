@@ -1,6 +1,62 @@
 function generateDraftRecords_(context) {
+  let generation;
+
+  try {
+    generation =
+      typeof generateAiEmailContents_ === 'function'
+        ? generateAiEmailContents_(context)
+        : generateTemplateEmailContents_(context);
+  } catch (error) {
+    generation = generateTemplateEmailContents_(context);
+    generation.method = 'TEMPLATE_FALLBACK';
+    generation.note = `OpenAI was unavailable: ${error.message}`;
+  }
+
+  return buildDraftRecords_(context, generation);
+}
+
+function buildDraftRecords_(context, generation) {
   const {
     eventKey,
+    enrollment,
+    partner,
+    program,
+    sequence,
+  } = context;
+  const generatedAt = nowIso_();
+
+  return sequence.map(item => {
+    const day = Number(item.day);
+    const content = generation.emails.find(
+      email => Number(email.day) === day,
+    );
+    if (!content) {
+      throw new Error(`No generated content returned for Day ${day}.`);
+    }
+
+    return {
+      draft_id: `DRAFT-${enrollment.enrollment_id}-${enrollment.date_status_changed}-D${day}`,
+      event_key: eventKey,
+      enrollment_id: enrollment.enrollment_id,
+      partner_id: partner.partner_id,
+      program_id: program.program_id,
+      day: String(day),
+      key_message: item.key_message,
+      desired_outcome: item.desired_outcome,
+      subject: content.subject,
+      body: content.body,
+      generation_method: generation.method,
+      generation_model: generation.model,
+      generation_note: generation.note,
+      review_status: REVIEW_STATUS.draft,
+      generated_at: generatedAt,
+      updated_at: generatedAt,
+    };
+  });
+}
+
+function generateTemplateEmailContents_(context) {
+  const {
     enrollment,
     partner,
     program,
@@ -8,7 +64,6 @@ function generateDraftRecords_(context) {
     resources,
     sequence,
   } = context;
-  const generatedAt = nowIso_();
   const firstName = (partner.contact_name || partner.partner_name)
     .trim()
     .split(/\s+/)[0];
@@ -22,36 +77,28 @@ function generateDraftRecords_(context) {
     .filter(Boolean)
     .join(', ');
 
-  return sequence.map(item => {
-    const day = Number(item.day);
-    const content = buildEmailContent_({
-      day,
-      firstName,
-      partner,
-      program,
-      enrollment,
-      commission,
-      portal,
-      enablement,
-      messaging,
-    });
-
-    return {
-      draft_id: `DRAFT-${enrollment.enrollment_id}-${enrollment.date_status_changed}-D${day}`,
-      event_key: eventKey,
-      enrollment_id: enrollment.enrollment_id,
-      partner_id: partner.partner_id,
-      program_id: program.program_id,
-      day: String(day),
-      key_message: item.key_message,
-      desired_outcome: item.desired_outcome,
-      subject: content.subject,
-      body: content.body,
-      review_status: REVIEW_STATUS.draft,
-      generated_at: generatedAt,
-      updated_at: generatedAt,
-    };
-  });
+  return {
+    emails: sequence.map(item => {
+      const day = Number(item.day);
+      return {
+        day,
+        ...buildEmailContent_({
+          day,
+          firstName,
+          partner,
+          program,
+          enrollment,
+          commission,
+          portal,
+          enablement,
+          messaging,
+        }),
+      };
+    }),
+    method: 'TEMPLATE',
+    model: '',
+    note: 'Deterministic template used because OpenAI is not configured.',
+  };
 }
 
 function buildEmailContent_(context) {

@@ -6,6 +6,11 @@
     "trigger": {
       "installed": true,
       "intervalMinutes": 5
+    },
+    "ai": {
+      "configured": true,
+      "provider": "OpenAI",
+      "model": "gpt-5-mini"
     }
   },
   "programs": [
@@ -167,6 +172,9 @@
       "desired_outcome": "The partner opens the portal and saves the tracking link.",
       "subject": "You're approved: welcome to the Ledgerly Partner Program",
       "body": "Hi Dana,\n\nWelcome to the Ledgerly Partner Program. Bright Path Consulting is now approved as a Standard partner.\n\nYour referral link: https://ledgerly.io/ref/P-1042\nPartner portal: https://www.example3.com\n\nYour Standard commission is 20% of first-year contract value on referred deals.\n\nPlease save your referral link and sign in to the portal, where you can register deals and track commissions. If you need help, contact partners@ledgerly.io.\n\nBest,\nVitor Carro\nPartner Commerce | Ledgerly Partner Program",
+      "generation_method": "OPENAI",
+      "generation_model": "gpt-5-mini",
+      "generation_note": "Draft copy generated from the human-authored sequence brief.",
       "review_status": "DRAFT"
     },
     {
@@ -180,6 +188,9 @@
       "desired_outcome": "The partner identifies and registers a first potential deal.",
       "subject": "A quick path to your first Ledgerly referral",
       "body": "Hi Dana,\n\nA practical first step is to identify one mid-market finance team that is exploring accounting automation.\n\n1. Review the enablement materials: https://www.example1.com\n2. Register the opportunity in the partner portal: https://www.example3.com\n3. Use your referral link: https://ledgerly.io/ref/P-1042\n\nQuick-start tip: register the deal first so tracking and program support are in place from the beginning.\n\nBest,\nVitor Carro\nPartner Commerce | Ledgerly Partner Program",
+      "generation_method": "OPENAI",
+      "generation_model": "gpt-5-mini",
+      "generation_note": "Draft copy generated from the human-authored sequence brief.",
       "review_status": "DRAFT"
     },
     {
@@ -193,7 +204,11 @@
       "desired_outcome": "The partner can position Ledgerly credibly and asks for help if blocked.",
       "subject": "How is your Ledgerly onboarding going?",
       "body": "Hi Dana,\n\nChecking in to see whether you have everything you need to introduce Ledgerly to the right finance teams.\n\nOne positioning tip: lead with the finance team's workflow challenge, then explain where Ledgerly fits. Keep the conversation practical and peer-to-peer rather than leading with a product pitch.\n\nIf you would like help thinking through a potential fit, contact partners@ledgerly.io.\n\nBest,\nVitor Carro\nPartner Commerce | Ledgerly Partner Program",
-      "review_status": "APPROVED"
+      "generation_method": "OPENAI",
+      "generation_model": "gpt-5-mini",
+      "generation_note": "Draft copy generated from the human-authored sequence brief.",
+      "review_status": "SENT",
+      "sent_at": "2026-07-24T18:44:00.000Z"
     }
   ],
   "log": [

@@ -16,6 +16,7 @@ sequenceDiagram
     participant WebApp as Apps Script Web App
     participant Scanner as Onboarding Service
     participant Sheets as Google Sheets
+    participant OpenAI
 
     Operator->>WebApp: Run Scan Now
     WebApp->>Scanner: scanForActivations
@@ -23,6 +24,8 @@ sequenceDiagram
     Scanner->>Sheets: Read Processing Log
     Scanner->>Scanner: Ignore previously processed event keys
     alt AUTO
+        Scanner->>OpenAI: Partner + program + human strategy
+        OpenAI-->>Scanner: Structured Day 0 / 3 / 7 copy
         Scanner->>Sheets: Write 3 email drafts
         Scanner->>Sheets: Log DRAFTED result
     else MANUAL
@@ -47,12 +50,13 @@ Before generating, the service checks the Processing Log for a successful `DRAFT
 
 - `Repository.gs` owns reads and writes.
 - `OnboardingService.gs` owns event detection and orchestration.
-- `EmailGenerator.gs` owns deterministic content assembly.
+- `OpenAiService.gs` owns the Responses API request and structured-output validation.
+- `EmailGenerator.gs` assembles draft records and owns the deterministic fallback.
 - `ProgramService.gs` and `PartnerService.gs` own operator mutations.
 - `TriggerService.gs` owns installation and removal of the scheduled scan.
 - `StateService.gs` assembles a client-friendly state object.
 
-Email delivery is outside the prototype. In production, an approved draft could be handed to Gmail, an ESP, or a CRM sequence API behind a separate delivery service.
+Email delivery is outside the prototype. `Approve & send` records a simulated `SENT` state. In production, that transition could hand the approved draft to Gmail, an ESP, or a CRM sequence API behind a separate delivery service.
 
 ## Production hardening
 

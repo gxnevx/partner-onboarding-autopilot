@@ -118,6 +118,7 @@
       programs.find(item => item.program_id === ui.selectedProgramId) ||
       programs[0];
     const trigger = ui.data.meta.trigger;
+    const ai = ui.data.meta.ai;
     const generatedSequences = reviewGroups().length;
 
     return `
@@ -130,6 +131,10 @@
             : 'No scheduled trigger installed'}</span>
         </div>
         <div class="toolbar">
+          <span class="engine-status ${ai.configured ? 'ready' : 'fallback'}">
+            <strong>${ai.configured ? 'AI writer ready' : 'Template fallback'}</strong>
+            ${escapeHtml(ai.configured ? ai.model : 'OpenAI key not configured')}
+          </span>
           <button class="button secondary" onclick="${trigger.installed
             ? 'removeTrigger()'
             : 'installTrigger()'}">
@@ -147,7 +152,7 @@
         <div class="flow-steps">
           ${flowStep('1', 'Approve', 'A partner moves from Pending to Active.')}
           ${flowStep('2', 'Detect', 'Auto runs immediately; Manual waits for review.')}
-          ${flowStep('3', 'Draft', 'Day 0, 3, and 7 emails are generated.')}
+          ${flowStep('3', 'Generate', 'OpenAI writes Day 0, 3, and 7 from your strategy.')}
         </div>
         <div class="flow-output">
           <strong>${generatedSequences}</strong>
@@ -177,7 +182,7 @@
             <div class="workspace-title">
               <div>
                 <h2>${escapeHtml(selectedProgram.program_name)}</h2>
-                <p>${escapeHtml(selectedProgram.overview)} Choose how new approvals are handled.</p>
+                <p>${escapeHtml(selectedProgram.overview)} Your sequence blueprint guides the AI writing layer.</p>
               </div>
               <div class="toggle">
                 <button class="${selectedProgram.processing_mode === 'MANUAL' ? 'active' : ''}"
@@ -272,10 +277,10 @@
             <span class="step-number">3</span>
             <div>
               <button class="button success" onclick="simulate('${program.program_id}')" ${available.length ? '' : 'disabled'}>
-                Approve partner and run workflow
+                Approve partner and generate with AI
               </button>
               <p>${program.processing_mode === 'AUTO'
-                ? 'Automatic mode will generate the three drafts and open Email Reviews.'
+                ? 'Automatic mode sends your strategy and partner context to OpenAI, then opens Email Reviews.'
                 : 'Manual mode will place the approval in the queue above.'}</p>
             </div>
           </div>
@@ -341,7 +346,7 @@
       <form id="program-form" onsubmit="saveProgramForm(event)">
         <div class="workspace-title">
           <div><h2>${isNew ? 'New program' : escapeHtml(program.program_name)}</h2>
-            <p>Program context, commercial rules, resources, and sequence strategy.</p></div>
+            <p>Source-of-truth context plus the human strategy that guides AI-generated copy.</p></div>
           <div class="toolbar">
             ${!isNew ? `<button type="button" class="button danger" onclick="archiveCurrentProgram()">Archive</button>` : ''}
             <button class="button" type="submit">Save program</button>
@@ -368,13 +373,21 @@
         </div>
         <div class="subsection">
           <h3>Onboarding resources</h3>
+          <p class="subsection-copy">Links the AI may include when relevant: enablement materials, messaging guidance, and the portal for deal registration and commission tracking.</p>
           <div id="resource-rows">
             ${(program.resources || []).map(resourceRow).join('')}
           </div>
           <button type="button" class="button ghost" onclick="addResourceRow()">+ Add resource</button>
         </div>
         <div class="subsection">
-          <h3>Email sequence strategy</h3>
+          <div class="strategy-heading">
+            <div>
+              <span class="kicker">Human-authored AI brief</span>
+              <h3>Email sequence blueprint</h3>
+              <p class="subsection-copy">You define the purpose, the one idea that must stick, and the intended next step. OpenAI writes the personalized email from these constraints.</p>
+            </div>
+            <span class="human-badge">Strategy by you</span>
+          </div>
           <div id="sequence-rows">
             ${(program.sequence || defaultSequence()).map(sequenceRow).join('')}
           </div>
@@ -508,12 +521,14 @@
           <div class="list">
             ${groups.map(group => {
               const groupPartner = partnerById(group.partnerId);
-              const approved = group.drafts.every(item => item.review_status === 'APPROVED');
+              const sent = group.drafts.every(item =>
+                ['SENT', 'APPROVED'].includes(item.review_status),
+              );
               return `
                 <button class="list-item ${group.eventKey === selected.eventKey ? 'active' : ''}"
                   onclick="selectReview('${escapeAttr(group.eventKey)}')">
                   <div class="list-title">${escapeHtml(groupPartner ? groupPartner.partner_name : group.partnerId)}
-                    ${badge(approved ? 'APPROVED' : 'DRAFT')}
+                    ${badge(sent ? 'SENT' : 'DRAFT')}
                   </div>
                   <div class="list-meta">${escapeHtml(group.programId)} · ${escapeHtml(group.enrollmentId)}</div>
                 </button>
@@ -540,18 +555,27 @@
               <div class="email-body">${linkify(escapeHtml(draft.body))}</div>
             </article>
             <div class="review-actions">
+              <button class="button danger" onclick="removeDraft('${draft.draft_id}')">Delete draft</button>
               <button class="button secondary" onclick="editDraft('${draft.draft_id}')">Edit draft</button>
-              <button class="button success" onclick="approve('${draft.draft_id}')" ${draft.review_status === 'APPROVED' ? 'disabled' : ''}>
-                ${draft.review_status === 'APPROVED' ? 'Approved' : 'Approve draft'}
+              <button class="button secondary" onclick="regenerate('${draft.draft_id}')">Regenerate this email</button>
+              <button class="button success" onclick="approve('${draft.draft_id}')" ${['SENT', 'APPROVED'].includes(draft.review_status) ? 'disabled' : ''}>
+                ${['SENT', 'APPROVED'].includes(draft.review_status) ? 'Sent' : 'Approve & send'}
               </button>
             </div>
           </div>
         </section>
         <aside class="inspector">
-          <div class="section-head"><div><h2>Strategy</h2><p>Why this email exists</p></div></div>
+          <div class="section-head"><div><h2>Human strategy</h2><p>The brief supplied to the AI writer</p></div></div>
           <div class="inspector-body">
-            <div class="inspector-block"><h3>Key message</h3><p>${escapeHtml(draft.key_message)}</p></div>
-            <div class="inspector-block"><h3>Desired outcome</h3><p>${escapeHtml(draft.desired_outcome)}</p></div>
+            <div class="generation-proof">
+              <span class="generation-icon">${draft.generation_method === 'OPENAI' ? 'AI' : 'T'}</span>
+              <div>
+                <strong>${escapeHtml(generationMethodLabel(draft))}</strong>
+                <span>${escapeHtml(draft.generation_model || draft.generation_note || '')}</span>
+              </div>
+            </div>
+            <div class="inspector-block"><h3>Key message <span>defined by you</span></h3><p>${escapeHtml(draft.key_message)}</p></div>
+            <div class="inspector-block"><h3>Desired outcome <span>defined by you</span></h3><p>${escapeHtml(draft.desired_outcome)}</p></div>
             <div class="inspector-block"><h3>Context</h3>
               <p>${escapeHtml(program ? program.client_name : '')}<br>${escapeHtml(enrollment ? enrollment.tier : '')}<br>${escapeHtml(partner ? partner.partner_name : '')}</p>
             </div>
@@ -653,8 +677,8 @@
 
     common.push({
       label:
-        draft.review_status === 'APPROVED'
-          ? 'Human review approved'
+        ['SENT', 'APPROVED'].includes(draft.review_status)
+          ? 'Approved and marked sent'
           : 'Human review required',
       passed: true,
     });
@@ -800,7 +824,18 @@
     runAction('Archiving partner…', () => server('archivePartner', ui.selectedPartnerId));
   }
   function approve(draftId) {
-    runAction('Approving draft…', () => server('approveDraft', draftId));
+    runAction('Approving and marking sent…', () => server('approveDraft', draftId));
+  }
+
+  function regenerate(draftId) {
+    runAction('Regenerating this email with OpenAI…', () =>
+      server('regenerateDraft', draftId),
+    );
+  }
+
+  function removeDraft(draftId) {
+    if (!confirm('Delete this draft? The other emails in the sequence will remain.')) return;
+    runAction('Deleting draft…', () => server('deleteDraft', draftId));
   }
 
   function editDraft(draftId) {
@@ -918,12 +953,31 @@
     </div>`;
   }
   function sequenceRow(item) {
-    return `<div class="repeat-row sequence sequence-row">
-      <input data-field="day" value="${escapeAttr(item.day)}" readonly>
-      <input data-field="goal" placeholder="Goal" value="${escapeAttr(item.goal)}">
-      <input data-field="key_message" placeholder="Key message" value="${escapeAttr(item.key_message)}">
-      <input data-field="desired_outcome" placeholder="Desired outcome" value="${escapeAttr(item.desired_outcome)}">
+    return `<div class="sequence-card sequence-row">
+      <div class="sequence-day">
+        <span>Day</span>
+        <strong>${escapeHtml(item.day)}</strong>
+        <input data-field="day" type="hidden" value="${escapeAttr(item.day)}">
+      </div>
+      <label class="field">Goal
+        <textarea data-field="goal" placeholder="What role does this email play?">${escapeHtml(item.goal)}</textarea>
+        <small>The job of this touchpoint in the sequence.</small>
+      </label>
+      <label class="field key-message-field">Key message <em>defined by you</em>
+        <textarea data-field="key_message" placeholder="The one idea the partner should remember.">${escapeHtml(item.key_message)}</textarea>
+        <small>This is your strategic instruction to the AI writer.</small>
+      </label>
+      <label class="field">Desired outcome
+        <textarea data-field="desired_outcome" placeholder="What should the partner do or understand next?">${escapeHtml(item.desired_outcome)}</textarea>
+        <small>The behavior or next step the email should drive.</small>
+      </label>
     </div>`;
+  }
+
+  function generationMethodLabel(draft) {
+    if (draft.generation_method === 'OPENAI') return 'Copy generated by OpenAI';
+    if (draft.generation_method === 'TEMPLATE_FALLBACK') return 'Template fallback used';
+    return 'Deterministic template';
   }
 
   function field(label, name, value = '', required = false, attributes = '', className = '') {
@@ -944,7 +998,7 @@
   }
   function badge(value) {
     const normalized = String(value || '').toUpperCase();
-    const color = ['ACTIVE','AUTO','APPROVED','DRAFTED'].includes(normalized)
+    const color = ['ACTIVE','AUTO','APPROVED','SENT','DRAFTED'].includes(normalized)
       ? 'green'
       : ['PENDING','MANUAL','DRAFT','PAUSED'].includes(normalized)
         ? 'amber'

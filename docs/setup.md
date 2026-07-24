@@ -35,7 +35,16 @@ setupDemoSpreadsheet()
 
 Authorize the requested Google Sheets permissions. The function creates all eight sheets, writes headers, seeds the exact Ledgerly exercise data, and stores the spreadsheet ID in Script Properties.
 
-## 4. Install the scanner
+## 4. Configure the OpenAI writing layer
+
+In **Project Settings → Script Properties**, add:
+
+- `OPENAI_API_KEY`: your server-side API key.
+- `OPENAI_MODEL`: optional; defaults to `gpt-5-mini`.
+
+Run `testOpenAiConnection()` once. Google will ask permission for the Apps Script project to connect to an external service. The key stays in Script Properties and is never returned to the web interface.
+
+## 5. Install the scanner
 
 Run:
 
@@ -45,7 +54,7 @@ installScheduledTrigger()
 
 This removes any prior scanner trigger and installs one five-minute clock trigger for `scheduledScan`.
 
-## 5. Deploy the web app
+## 6. Deploy the web app
 
 In Apps Script:
 
@@ -62,7 +71,9 @@ In Apps Script:
 3. Use a pending partner in **Demo controls** and simulate activation.
 4. Run the scan or manually accept the activation.
 5. Open **Email Reviews** and move through Day 0, Day 3, and Day 7.
-6. Point out the key message and desired outcome beside each preview.
-7. Briefly show **Programs** and **Partners** to demonstrate that content comes from configurable data, not hard-coded UI.
+6. Point out that Goal, Key Message, and Desired Outcome are human-authored strategy; OpenAI writes the copy from that brief.
+7. Regenerate Day 3 and show that Day 0 and Day 7 are untouched.
+8. Approve one email and show the `SENT` state. Explain that delivery is simulated because real sending is outside the exercise.
+9. Briefly show **Programs** and **Partners** to demonstrate that content comes from configurable data, not hard-coded UI.
 
 The demo should emphasize the activation logic and message decisions. The management pages support that story; they are not the story themselves.

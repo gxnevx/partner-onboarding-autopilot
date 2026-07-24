@@ -14,6 +14,7 @@ function buildAppState_() {
       scanIntervalMinutes: APP_CONFIG.scanIntervalMinutes,
       spreadsheetUrl: getSpreadsheet_().getUrl(),
       trigger: getScheduledTriggerInfo_(),
+      ai: getPublicAiStatus_(),
     },
     programs: programs.map(program => ({
       ...program,

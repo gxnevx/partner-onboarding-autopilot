@@ -20,7 +20,34 @@ function getSheet_(sheetKey) {
     throw new Error(`Missing sheet: ${sheetName}`);
   }
 
+  ensureSheetHeaders_(sheet, sheetKey);
   return sheet;
+}
+
+function ensureSheetHeaders_(sheet, sheetKey) {
+  const requiredHeaders = APP_CONFIG.headers[sheetKey] || [];
+  if (!requiredHeaders.length) {
+    return;
+  }
+
+  const columnCount = Math.max(sheet.getLastColumn(), 1);
+  const existingHeaders = sheet
+    .getRange(1, 1, 1, columnCount)
+    .getDisplayValues()[0]
+    .filter(Boolean);
+  const missingHeaders = requiredHeaders.filter(
+    header => !existingHeaders.includes(header),
+  );
+
+  if (!missingHeaders.length) {
+    return;
+  }
+
+  const startColumn = existingHeaders.length + 1;
+  sheet
+    .getRange(1, startColumn, 1, missingHeaders.length)
+    .setValues([missingHeaders]);
+  formatHeader_(sheet, startColumn + missingHeaders.length - 1);
 }
 
 function readRows_(sheetKey) {
@@ -64,6 +91,27 @@ function upsertRow_(sheetKey, idField, record) {
   sheet
     .getRange(rowIndex + 1, 1, 1, headers.length)
     .setValues([rowValues]);
+}
+
+function deleteRowById_(sheetKey, idField, idValue) {
+  const sheet = getSheet_(sheetKey);
+  const values = sheet.getDataRange().getDisplayValues();
+  const headers = values[0] || [];
+  const idIndex = headers.indexOf(idField);
+  if (idIndex === -1) {
+    throw new Error(`Missing identifier column: ${idField}`);
+  }
+
+  const rowIndex = values.findIndex(
+    (row, index) =>
+      index > 0 && String(row[idIndex]) === String(idValue),
+  );
+  if (rowIndex === -1) {
+    return false;
+  }
+
+  sheet.deleteRow(rowIndex + 1);
+  return true;
 }
 
 function replaceChildRows_(sheetKey, parentField, parentId, records) {

@@ -1,5 +1,8 @@
 const APP_CONFIG = Object.freeze({
   spreadsheetProperty: 'SPREADSHEET_ID',
+  openAiApiKeyProperty: 'OPENAI_API_KEY',
+  openAiModelProperty: 'OPENAI_MODEL',
+  defaultOpenAiModel: 'gpt-5-mini',
   scanIntervalMinutes: 5,
   sheets: Object.freeze({
     programs: 'Programs',
@@ -74,7 +77,11 @@ const APP_CONFIG = Object.freeze({
       'desired_outcome',
       'subject',
       'body',
+      'generation_method',
+      'generation_model',
+      'generation_note',
       'review_status',
+      'sent_at',
       'generated_at',
       'updated_at',
     ],
@@ -111,4 +118,5 @@ const APPROVAL_STATUS = Object.freeze({
 const REVIEW_STATUS = Object.freeze({
   draft: 'DRAFT',
   approved: 'APPROVED',
+  sent: 'SENT',
 });
