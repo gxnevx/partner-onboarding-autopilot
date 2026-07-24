@@ -1,0 +1,210 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-24T18:35:00.000Z",
+    "scanIntervalMinutes": 5,
+    "spreadsheetUrl": "#",
+    "trigger": {
+      "installed": true,
+      "intervalMinutes": 5
+    }
+  },
+  "programs": [
+    {
+      "program_id": "LEDGERLY",
+      "client_name": "Ledgerly",
+      "program_name": "Ledgerly Partner Program",
+      "overview": "B2B SaaS accounting automation for mid-market finance teams.",
+      "brand_voice": "Professional, credible, no fluff. Finance-leader-to-finance-leader. Confident but not salesy.",
+      "support_email": "partners@ledgerly.io",
+      "tracking_link_template": "https://ledgerly.io/ref/{partner_id}",
+      "coordinator_name": "Vitor Carro",
+      "processing_mode": "AUTO",
+      "status": "ACTIVE",
+      "updated_at": "2026-07-24T18:30:00.000Z",
+      "tiers": [
+        {
+          "program_id": "LEDGERLY",
+          "tier_name": "Standard",
+          "commission_summary": "20% of first-year contract value on referred deals",
+          "bonus_summary": ""
+        },
+        {
+          "program_id": "LEDGERLY",
+          "tier_name": "Premium",
+          "commission_summary": "25% of first-year contract value on referred deals",
+          "bonus_summary": "$500 bonus after 3 referred deals close in a quarter"
+        }
+      ],
+      "resources": [
+        {
+          "resource_id": "RES-LEDGERLY-ENABLEMENT",
+          "program_id": "LEDGERLY",
+          "resource_type": "ENABLEMENT",
+          "resource_name": "Partner enablement deck & one-pagers",
+          "url": "https://www.example1.com"
+        },
+        {
+          "resource_id": "RES-LEDGERLY-MESSAGING",
+          "program_id": "LEDGERLY",
+          "resource_type": "MESSAGING",
+          "resource_name": "Co-branded messaging guidelines",
+          "url": "https://www.example2.com"
+        },
+        {
+          "resource_id": "RES-LEDGERLY-PORTAL",
+          "program_id": "LEDGERLY",
+          "resource_type": "PORTAL",
+          "resource_name": "Partner portal",
+          "url": "https://www.example3.com"
+        }
+      ],
+      "sequence": [
+        {
+          "program_id": "LEDGERLY",
+          "day": "0",
+          "goal": "Confirm approval and share access.",
+          "key_message": "You are approved and have everything you need to begin.",
+          "desired_outcome": "The partner opens the portal and saves the tracking link."
+        },
+        {
+          "program_id": "LEDGERLY",
+          "day": "3",
+          "goal": "Drive first activation.",
+          "key_message": "Your fastest path to activation is one well-matched registered opportunity.",
+          "desired_outcome": "The partner identifies and registers a first potential deal."
+        },
+        {
+          "program_id": "LEDGERLY",
+          "day": "7",
+          "goal": "Offer help and reinforce positioning.",
+          "key_message": "Lead with the finance team’s workflow challenge, not a product pitch.",
+          "desired_outcome": "The partner can position Ledgerly credibly and asks for help if blocked."
+        }
+      ]
+    }
+  ],
+  "partners": [
+    {
+      "partner_id": "P-1042",
+      "partner_name": "Bright Path Consulting",
+      "contact_name": "Dana Ruiz",
+      "contact_email": "dana@brightpathconsulting.com",
+      "record_status": "ACTIVE",
+      "updated_at": "2026-07-24T18:30:00.000Z"
+    },
+    {
+      "partner_id": "P-1043",
+      "partner_name": "Northline Advisory",
+      "contact_name": "Sam Okafor",
+      "contact_email": "sam@northlineadvisory.com",
+      "record_status": "ACTIVE",
+      "updated_at": "2026-07-24T18:30:00.000Z"
+    },
+    {
+      "partner_id": "P-1044",
+      "partner_name": "Verve Systems Group",
+      "contact_name": "Priya Nair",
+      "contact_email": "priya@vervesystemsgroup.com",
+      "record_status": "ACTIVE",
+      "updated_at": "2026-07-24T18:30:00.000Z"
+    },
+    {
+      "partner_id": "P-1045",
+      "partner_name": "Anchorpoint CPAs",
+      "contact_name": "Liam Foster",
+      "contact_email": "liam@anchorpointcpas.com",
+      "record_status": "ACTIVE",
+      "updated_at": "2026-07-24T18:30:00.000Z"
+    }
+  ],
+  "enrollments": [
+    {
+      "enrollment_id": "ENR-LEDGERLY-P-1042",
+      "partner_id": "P-1042",
+      "program_id": "LEDGERLY",
+      "approval_status": "ACTIVE",
+      "tier": "Standard",
+      "date_status_changed": "2026-07-23",
+      "tracking_link": "https://ledgerly.io/ref/P-1042"
+    },
+    {
+      "enrollment_id": "ENR-LEDGERLY-P-1043",
+      "partner_id": "P-1043",
+      "program_id": "LEDGERLY",
+      "approval_status": "PENDING",
+      "tier": "Standard",
+      "date_status_changed": "2026-07-20",
+      "tracking_link": "https://ledgerly.io/ref/P-1043"
+    },
+    {
+      "enrollment_id": "ENR-LEDGERLY-P-1044",
+      "partner_id": "P-1044",
+      "program_id": "LEDGERLY",
+      "approval_status": "ACTIVE",
+      "tier": "Premium",
+      "date_status_changed": "2026-07-23",
+      "tracking_link": "https://ledgerly.io/ref/P-1044"
+    },
+    {
+      "enrollment_id": "ENR-LEDGERLY-P-1045",
+      "partner_id": "P-1045",
+      "program_id": "LEDGERLY",
+      "approval_status": "PENDING",
+      "tier": "Standard",
+      "date_status_changed": "2026-07-18",
+      "tracking_link": "https://ledgerly.io/ref/P-1045"
+    }
+  ],
+  "drafts": [
+    {
+      "draft_id": "DRAFT-ENR-LEDGERLY-P-1042-2026-07-23-D0",
+      "event_key": "ENR-LEDGERLY-P-1042|2026-07-23",
+      "enrollment_id": "ENR-LEDGERLY-P-1042",
+      "partner_id": "P-1042",
+      "program_id": "LEDGERLY",
+      "day": "0",
+      "key_message": "You are approved and have everything you need to begin.",
+      "desired_outcome": "The partner opens the portal and saves the tracking link.",
+      "subject": "You're approved: welcome to the Ledgerly Partner Program",
+      "body": "Hi Dana,\n\nWelcome to the Ledgerly Partner Program. Bright Path Consulting is now approved as a Standard partner.\n\nYour referral link: https://ledgerly.io/ref/P-1042\nPartner portal: https://www.example3.com\n\nYour Standard commission is 20% of first-year contract value on referred deals.\n\nPlease save your referral link and sign in to the portal, where you can register deals and track commissions. If you need help, contact partners@ledgerly.io.\n\nBest,\nVitor Carro\nPartner Commerce | Ledgerly Partner Program",
+      "review_status": "DRAFT"
+    },
+    {
+      "draft_id": "DRAFT-ENR-LEDGERLY-P-1042-2026-07-23-D3",
+      "event_key": "ENR-LEDGERLY-P-1042|2026-07-23",
+      "enrollment_id": "ENR-LEDGERLY-P-1042",
+      "partner_id": "P-1042",
+      "program_id": "LEDGERLY",
+      "day": "3",
+      "key_message": "Your fastest path to activation is one well-matched registered opportunity.",
+      "desired_outcome": "The partner identifies and registers a first potential deal.",
+      "subject": "A quick path to your first Ledgerly referral",
+      "body": "Hi Dana,\n\nA practical first step is to identify one mid-market finance team that is exploring accounting automation.\n\n1. Review the enablement materials: https://www.example1.com\n2. Register the opportunity in the partner portal: https://www.example3.com\n3. Use your referral link: https://ledgerly.io/ref/P-1042\n\nQuick-start tip: register the deal first so tracking and program support are in place from the beginning.\n\nBest,\nVitor Carro\nPartner Commerce | Ledgerly Partner Program",
+      "review_status": "DRAFT"
+    },
+    {
+      "draft_id": "DRAFT-ENR-LEDGERLY-P-1042-2026-07-23-D7",
+      "event_key": "ENR-LEDGERLY-P-1042|2026-07-23",
+      "enrollment_id": "ENR-LEDGERLY-P-1042",
+      "partner_id": "P-1042",
+      "program_id": "LEDGERLY",
+      "day": "7",
+      "key_message": "Lead with the finance team’s workflow challenge, not a product pitch.",
+      "desired_outcome": "The partner can position Ledgerly credibly and asks for help if blocked.",
+      "subject": "How is your Ledgerly onboarding going?",
+      "body": "Hi Dana,\n\nChecking in to see whether you have everything you need to introduce Ledgerly to the right finance teams.\n\nOne positioning tip: lead with the finance team's workflow challenge, then explain where Ledgerly fits. Keep the conversation practical and peer-to-peer rather than leading with a product pitch.\n\nIf you would like help thinking through a potential fit, contact partners@ledgerly.io.\n\nBest,\nVitor Carro\nPartner Commerce | Ledgerly Partner Program",
+      "review_status": "APPROVED"
+    }
+  ],
+  "log": [
+    {
+      "event_key": "ENR-LEDGERLY-P-1042|2026-07-23",
+      "enrollment_id": "ENR-LEDGERLY-P-1042",
+      "program_id": "LEDGERLY",
+      "source": "MANUAL_SCAN",
+      "result": "DRAFTED",
+      "message": "3 drafts created",
+      "processed_at": "2026-07-24T18:34:00.000Z"
+    }
+  ]
+}

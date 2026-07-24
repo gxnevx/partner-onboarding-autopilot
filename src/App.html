@@ -1,0 +1,884 @@
+<script>
+  const ui = {
+    data: null,
+    route: location.hash.replace('#/', '') || 'activations',
+    selectedProgramId: 'LEDGERLY',
+    selectedPartnerId: 'P-1042',
+    selectedReviewKey: '',
+    selectedDay: '0',
+    busy: false,
+  };
+
+  const routeMeta = {
+    activations: ['Operations', 'Activations'],
+    programs: ['Configuration', 'Programs'],
+    partners: ['Directory', 'Partners'],
+    reviews: ['Quality control', 'Email Reviews'],
+  };
+
+  window.addEventListener('hashchange', () => {
+    ui.route = location.hash.replace('#/', '') || 'activations';
+    render();
+  });
+
+  document.addEventListener('DOMContentLoaded', loadState);
+
+  function server(functionName, ...args) {
+    return new Promise((resolve, reject) => {
+      const runner = google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(error => reject(new Error(error.message || error)));
+      runner[functionName](...args);
+    });
+  }
+
+  async function loadState() {
+    try {
+      ui.data = await server('getAppState');
+      const groups = reviewGroups();
+      if (!ui.selectedReviewKey && groups.length) {
+        ui.selectedReviewKey = groups[0].eventKey;
+      }
+      render();
+    } catch (error) {
+      document.getElementById('app').innerHTML = emptyState(
+        'Setup required',
+        `${escapeHtml(error.message)}<br><br>Run <code>setupDemoSpreadsheet()</code> in Apps Script.`,
+      );
+    }
+  }
+
+  function render() {
+    if (!ui.data) return;
+    const [eyebrow, title] = routeMeta[ui.route] || routeMeta.activations;
+    document.getElementById('app').innerHTML = `
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">PC</div>
+            <div class="brand-copy">
+              <strong>Partner Autopilot</strong>
+              <span>Operations workspace</span>
+            </div>
+          </div>
+          <nav class="nav">
+            ${navButton('activations', '01', 'Activations')}
+            ${navButton('programs', '02', 'Programs')}
+            ${navButton('partners', '03', 'Partners')}
+            ${navButton('reviews', '04', 'Email Reviews')}
+          </nav>
+          <div class="sidebar-foot">
+            Google Sheets data source<br>
+            Apps Script Web App
+          </div>
+        </aside>
+        <main class="main">
+          <header class="topbar">
+            <div>
+              <p class="eyebrow">${eyebrow}</p>
+              <h1>${title}</h1>
+            </div>
+            <div class="top-actions">
+              <a class="button secondary" href="${ui.data.meta.spreadsheetUrl}" target="_blank">Open Sheet</a>
+            </div>
+          </header>
+          <div class="content">${renderPage()}</div>
+        </main>
+      </div>
+    `;
+  }
+
+  function navButton(route, number, label) {
+    return `
+      <button class="${ui.route === route ? 'active' : ''}" onclick="navigate('${route}')">
+        <span>${number}</span> <span class="nav-label">${label}</span>
+      </button>
+    `;
+  }
+
+  function navigate(route) {
+    location.hash = `/${route}`;
+  }
+
+  function renderPage() {
+    if (ui.route === 'programs') return renderPrograms();
+    if (ui.route === 'partners') return renderPartners();
+    if (ui.route === 'reviews') return renderReviews();
+    return renderActivations();
+  }
+
+  function renderActivations() {
+    const programs = activePrograms();
+    const enrollments = enrichedEnrollments();
+    const unprocessed = enrollments.filter(item =>
+      item.enrollment.approval_status === 'ACTIVE' && !item.processed,
+    );
+    const selectedProgram =
+      programs.find(item => item.program_id === ui.selectedProgramId) ||
+      programs[0];
+    const trigger = ui.data.meta.trigger;
+
+    return `
+      <div class="status-strip">
+        <div>
+          <strong>Scheduled processing</strong>
+          <span>${trigger.installed
+            ? `Runs every ${trigger.intervalMinutes} minutes`
+            : 'Trigger not installed'}</span>
+        </div>
+        <div class="toolbar">
+          <button class="button secondary" onclick="${trigger.installed
+            ? 'removeTrigger()'
+            : 'installTrigger()'}">
+            ${trigger.installed ? 'Remove trigger' : 'Install trigger'}
+          </button>
+          <button class="button" onclick="runScan()">Run scan now</button>
+        </div>
+      </div>
+      <div class="page-grid">
+        <section class="rail">
+          <div class="section-head">
+            <div><h2>Programs</h2><p>Processing behavior</p></div>
+          </div>
+          <div class="list">
+            ${programs.map(program => `
+              <button class="list-item ${selectedProgram && selectedProgram.program_id === program.program_id ? 'active' : ''}"
+                onclick="selectProgram('${program.program_id}')">
+                <div class="list-title">
+                  ${escapeHtml(program.client_name)}
+                  ${badge(program.processing_mode)}
+                </div>
+                <div class="list-meta">${escapeHtml(program.program_name)}</div>
+              </button>
+            `).join('')}
+          </div>
+        </section>
+        <section class="workspace">
+          ${selectedProgram ? `
+            <div class="workspace-title">
+              <div>
+                <h2>${escapeHtml(selectedProgram.program_name)}</h2>
+                <p>${escapeHtml(selectedProgram.overview)}</p>
+              </div>
+              <div class="toggle">
+                <button class="${selectedProgram.processing_mode === 'MANUAL' ? 'active' : ''}"
+                  onclick="setMode('${selectedProgram.program_id}', 'MANUAL')">Manual</button>
+                <button class="${selectedProgram.processing_mode === 'AUTO' ? 'active' : ''}"
+                  onclick="setMode('${selectedProgram.program_id}', 'AUTO')">Automatic</button>
+              </div>
+            </div>
+            <div class="subsection" style="margin-top:0;padding-top:0;border-top:0">
+              <h3>Unprocessed activations</h3>
+              ${unprocessed.filter(item => item.program.program_id === selectedProgram.program_id).length
+                ? unprocessed.filter(item => item.program.program_id === selectedProgram.program_id)
+                    .map(renderActivationRow).join('')
+                : emptyState('Queue is clear', 'No unprocessed Active enrollments for this program.')}
+            </div>
+            <div class="subsection">
+              <div class="workspace-title" style="margin-bottom:14px">
+                <div><h2 style="font-size:17px">Demo controls</h2>
+                  <p>Simulate the upstream platform approving a partner.</p></div>
+              </div>
+              ${renderSimulationForm(selectedProgram)}
+            </div>
+          ` : emptyState('No active program', 'Create or reactivate a program first.')}
+        </section>
+      </div>
+    `;
+  }
+
+  function renderActivationRow(item) {
+    const action =
+      item.program.processing_mode === 'MANUAL'
+        ? `<button class="button" onclick="processManual('${item.enrollment.enrollment_id}')">Generate drafts</button>`
+        : `<span class="badge green">Auto queued</span>`;
+    return `
+      <div class="queue-row">
+        <div><strong>${escapeHtml(item.partner.partner_name)}</strong><small>${escapeHtml(item.partner.contact_name)}</small></div>
+        <div>${escapeHtml(item.enrollment.tier)}<br><small>${escapeHtml(item.program.client_name)}</small></div>
+        <div>${badge(item.enrollment.approval_status)}</div>
+        <div>${action}</div>
+      </div>
+    `;
+  }
+
+  function renderSimulationForm(program) {
+    const available = ui.data.partners.filter(item => item.record_status === 'ACTIVE');
+    const tiers = program.tiers || [];
+    return `
+      <div class="field-grid">
+        <label class="field">Partner
+          <select id="sim-partner">
+            ${available.map(partner => `<option value="${partner.partner_id}">${escapeHtml(partner.partner_name)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">Tier
+          <select id="sim-tier">
+            ${tiers.map(tier => `<option value="${escapeAttr(tier.tier_name)}">${escapeHtml(tier.tier_name)}</option>`).join('')}
+          </select>
+        </label>
+        <div class="full">
+          <button class="button secondary" onclick="simulate('${program.program_id}')">Simulate activation</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPrograms() {
+    const programs = ui.data.programs;
+    const selected = ui.selectedProgramId === '__NEW__'
+      ? blankProgram()
+      : programs.find(item => item.program_id === ui.selectedProgramId) ||
+        programs[0] ||
+        blankProgram();
+
+    return `
+      <div class="page-grid">
+        <section class="rail">
+          <div class="section-head">
+            <div><h2>Programs</h2><p>${programs.length} configured</p></div>
+            <button class="button secondary" onclick="newProgram()">New</button>
+          </div>
+          <div class="list">
+            ${programs.map(program => `
+              <button class="list-item ${selected.program_id === program.program_id ? 'active' : ''}"
+                onclick="selectProgram('${program.program_id}')">
+                <div class="list-title">${escapeHtml(program.client_name)} ${badge(program.status)}</div>
+                <div class="list-meta">${escapeHtml(program.program_name)}</div>
+              </button>
+            `).join('')}
+          </div>
+        </section>
+        <section class="workspace">
+          ${programEditor(selected)}
+        </section>
+      </div>
+    `;
+  }
+
+  function programEditor(program) {
+    const isNew = !ui.data.programs.some(item => item.program_id === program.program_id);
+    return `
+      <form id="program-form" onsubmit="saveProgramForm(event)">
+        <div class="workspace-title">
+          <div><h2>${isNew ? 'New program' : escapeHtml(program.program_name)}</h2>
+            <p>Program context, commercial rules, resources, and sequence strategy.</p></div>
+          <div class="toolbar">
+            ${!isNew ? `<button type="button" class="button danger" onclick="archiveCurrentProgram()">Archive</button>` : ''}
+            <button class="button" type="submit">Save program</button>
+          </div>
+        </div>
+        <div class="field-grid">
+          ${field('Program ID', 'program_id', program.program_id, false, isNew ? '' : 'readonly')}
+          ${field('Client name', 'client_name', program.client_name)}
+          ${field('Program name', 'program_name', program.program_name)}
+          ${selectField('Status', 'status', ['ACTIVE','PAUSED','ARCHIVED'], program.status)}
+          ${textArea('Overview', 'overview', program.overview, 'full')}
+          ${textArea('Brand voice', 'brand_voice', program.brand_voice, 'full')}
+          ${field('Support email', 'support_email', program.support_email)}
+          ${field('Coordinator', 'coordinator_name', program.coordinator_name)}
+          ${field('Tracking link template', 'tracking_link_template', program.tracking_link_template, false, '', 'full')}
+          ${selectField('Processing mode', 'processing_mode', ['AUTO','MANUAL'], program.processing_mode)}
+        </div>
+        <div class="subsection">
+          <h3>Commission tiers</h3>
+          <div id="tier-rows">
+            ${(program.tiers || []).map(tierRow).join('')}
+          </div>
+          <button type="button" class="button ghost" onclick="addTierRow()">+ Add tier</button>
+        </div>
+        <div class="subsection">
+          <h3>Onboarding resources</h3>
+          <div id="resource-rows">
+            ${(program.resources || []).map(resourceRow).join('')}
+          </div>
+          <button type="button" class="button ghost" onclick="addResourceRow()">+ Add resource</button>
+        </div>
+        <div class="subsection">
+          <h3>Email sequence strategy</h3>
+          <div id="sequence-rows">
+            ${(program.sequence || defaultSequence()).map(sequenceRow).join('')}
+          </div>
+        </div>
+      </form>
+    `;
+  }
+
+  function renderPartners() {
+    const partners = ui.data.partners;
+    const selected = ui.selectedPartnerId === '__NEW__'
+      ? blankPartner()
+      : partners.find(item => item.partner_id === ui.selectedPartnerId) ||
+        partners[0] ||
+        blankPartner();
+    const memberships = ui.data.enrollments.filter(
+      item => item.partner_id === selected.partner_id && item.approval_status !== 'REMOVED',
+    );
+
+    return `
+      <div class="page-grid">
+        <section class="rail">
+          <div class="section-head">
+            <div><h2>Partners</h2><p>${partners.length} records</p></div>
+            <button class="button secondary" onclick="newPartner()">New</button>
+          </div>
+          <div class="list">
+            ${partners.map(partner => `
+              <button class="list-item ${selected.partner_id === partner.partner_id ? 'active' : ''}"
+                onclick="selectPartner('${partner.partner_id}')">
+                <div class="list-title">${escapeHtml(partner.partner_name)} ${badge(partner.record_status)}</div>
+                <div class="list-meta">${escapeHtml(partner.contact_name)} · ${escapeHtml(partner.contact_email)}</div>
+              </button>
+            `).join('')}
+          </div>
+        </section>
+        <section class="workspace">
+          <form id="partner-form" onsubmit="savePartnerForm(event)">
+            <div class="workspace-title">
+              <div><h2>${escapeHtml(selected.partner_name || 'New partner')}</h2><p>Company, contact, and program memberships.</p></div>
+              <div class="toolbar">
+                ${selected.partner_id && partners.some(item => item.partner_id === selected.partner_id)
+                  ? `<button type="button" class="button danger" onclick="archiveCurrentPartner()">Archive</button>`
+                  : ''}
+                <button class="button" type="submit">Save partner</button>
+              </div>
+            </div>
+            <div class="field-grid">
+              ${field('Partner ID', 'partner_id', selected.partner_id, false, partners.some(item => item.partner_id === selected.partner_id) ? 'readonly' : '')}
+              ${field('Company name', 'partner_name', selected.partner_name)}
+              ${field('Contact name', 'contact_name', selected.contact_name)}
+              ${field('Contact email', 'contact_email', selected.contact_email, true)}
+              ${selectField('Record status', 'record_status', ['ACTIVE','ARCHIVED'], selected.record_status)}
+            </div>
+          </form>
+          <div class="subsection">
+            <div class="workspace-title" style="margin-bottom:12px">
+              <div><h2 style="font-size:17px">Program approvals</h2><p>Status and tier are specific to each program.</p></div>
+            </div>
+            ${memberships.length ? memberships.map(item => membershipRow(item)).join('') : emptyState('No memberships', 'Add this partner to a program.')}
+            ${selected.partner_id ? enrollmentForm(selected) : ''}
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
+  function membershipRow(enrollment) {
+    const program = programById(enrollment.program_id);
+    return `
+      <div class="queue-row">
+        <div><strong>${escapeHtml(program ? program.client_name : enrollment.program_id)}</strong><small>${escapeHtml(enrollment.enrollment_id)}</small></div>
+        <div>${escapeHtml(enrollment.tier)}</div>
+        <div>${badge(enrollment.approval_status)}</div>
+        <button class="button danger" onclick="removeMembership('${enrollment.enrollment_id}')">Remove</button>
+      </div>
+    `;
+  }
+
+  function enrollmentForm(partner) {
+    const programs = activePrograms();
+    return `
+      <div class="field-grid" style="margin-top:18px">
+        <label class="field">Program
+          <select id="membership-program">
+            ${programs.map(program => `<option value="${program.program_id}">${escapeHtml(program.client_name)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field">Tier
+          <input id="membership-tier" value="${escapeAttr((programs[0] && programs[0].tiers[0] && programs[0].tiers[0].tier_name) || '')}">
+        </label>
+        <label class="field">Approval status
+          <select id="membership-status">
+            ${['PENDING','ACTIVE','REJECTED'].map(status => `<option>${status}</option>`).join('')}
+          </select>
+        </label>
+        <div style="align-self:end">
+          <button class="button secondary" onclick="saveMembership('${partner.partner_id}')">Add or update membership</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderReviews() {
+    const groups = reviewGroups();
+    const selected =
+      groups.find(group => group.eventKey === ui.selectedReviewKey) ||
+      groups[0];
+
+    if (!selected) {
+      return emptyState('No drafts yet', 'Run the activation scanner to create the first sequence.');
+    }
+
+    const draft =
+      selected.drafts.find(item => item.day === ui.selectedDay) ||
+      selected.drafts[0];
+    const partner = partnerById(selected.partnerId);
+    const program = programById(selected.programId);
+    const enrollment = enrollmentById(selected.enrollmentId);
+    const validations = validateDraftContext(
+      draft,
+      partner,
+      program,
+      enrollment,
+    );
+
+    return `
+      <div class="page-grid three">
+        <section class="rail">
+          <div class="section-head"><div><h2>Sequences</h2><p>${groups.length} generated</p></div></div>
+          <div class="list">
+            ${groups.map(group => {
+              const groupPartner = partnerById(group.partnerId);
+              const approved = group.drafts.every(item => item.review_status === 'APPROVED');
+              return `
+                <button class="list-item ${group.eventKey === selected.eventKey ? 'active' : ''}"
+                  onclick="selectReview('${escapeAttr(group.eventKey)}')">
+                  <div class="list-title">${escapeHtml(groupPartner ? groupPartner.partner_name : group.partnerId)}
+                    ${badge(approved ? 'APPROVED' : 'DRAFT')}
+                  </div>
+                  <div class="list-meta">${escapeHtml(group.programId)} · ${escapeHtml(group.enrollmentId)}</div>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </section>
+        <section class="workspace nopad">
+          <div class="email-stage">
+            <div class="day-tabs">
+              ${selected.drafts.map(item => `
+                <button class="${item.day === draft.day ? 'active' : ''}" onclick="selectDay('${item.day}')">Day ${item.day}</button>
+              `).join('')}
+            </div>
+            <article class="email-paper">
+              <div class="email-chrome">
+                <h2 class="email-subject">${escapeHtml(draft.subject)}</h2>
+                <div class="email-sender">
+                  <div class="avatar">${initials(program ? program.client_name : 'PC')}</div>
+                  <div><strong>${escapeHtml(program ? program.client_name + ' Partner Program' : draft.program_id)}</strong>
+                    <span>to ${escapeHtml(partner ? partner.contact_name : draft.partner_id)} · Day ${draft.day}</span></div>
+                </div>
+              </div>
+              <div class="email-body">${linkify(escapeHtml(draft.body))}</div>
+            </article>
+            <div class="review-actions">
+              <button class="button secondary" onclick="editDraft('${draft.draft_id}')">Edit draft</button>
+              <button class="button success" onclick="approve('${draft.draft_id}')" ${draft.review_status === 'APPROVED' ? 'disabled' : ''}>
+                ${draft.review_status === 'APPROVED' ? 'Approved' : 'Approve draft'}
+              </button>
+            </div>
+          </div>
+        </section>
+        <aside class="inspector">
+          <div class="section-head"><div><h2>Strategy</h2><p>Why this email exists</p></div></div>
+          <div class="inspector-body">
+            <div class="inspector-block"><h3>Key message</h3><p>${escapeHtml(draft.key_message)}</p></div>
+            <div class="inspector-block"><h3>Desired outcome</h3><p>${escapeHtml(draft.desired_outcome)}</p></div>
+            <div class="inspector-block"><h3>Context</h3>
+              <p>${escapeHtml(program ? program.client_name : '')}<br>${escapeHtml(enrollment ? enrollment.tier : '')}<br>${escapeHtml(partner ? partner.partner_name : '')}</p>
+            </div>
+            <div class="inspector-block"><h3>Validation</h3>
+              <div class="checklist">
+                ${validations.map(item => `
+                  <span class="check ${item.passed ? '' : 'fail'}">
+                    ${item.passed ? '&#10003;' : '&#9888;'} ${escapeHtml(item.label)}
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    `;
+  }
+
+  function validateDraftContext(draft, partner, program, enrollment) {
+    const body = String(draft.body || '').toLowerCase();
+    const subject = String(draft.subject || '').toLowerCase();
+    const firstName = String(partner ? partner.contact_name : '')
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase();
+    const programName = String(program ? program.client_name : '').toLowerCase();
+    const common = [
+      {
+        label: 'Partner personalized',
+        passed: Boolean(firstName && body.includes(firstName)),
+      },
+      {
+        label: 'Correct program context',
+        passed: Boolean(
+          programName &&
+          (body.includes(programName) || subject.includes(programName)),
+        ),
+      },
+    ];
+
+    if (String(draft.day) === '0') {
+      common.push(
+        {
+          label: 'Tier and commission applied',
+          passed: Boolean(
+            enrollment &&
+            body.includes(String(enrollment.tier || '').toLowerCase()) &&
+            body.includes('commission'),
+          ),
+        },
+        {
+          label: 'Tracking link included',
+          passed: Boolean(
+            enrollment &&
+            enrollment.tracking_link &&
+            body.includes(String(enrollment.tracking_link).toLowerCase()),
+          ),
+        },
+        {
+          label: 'Portal access included',
+          passed: body.includes('portal'),
+        },
+      );
+    } else if (String(draft.day) === '3') {
+      common.push(
+        {
+          label: 'Enablement resource included',
+          passed: body.includes('enablement'),
+        },
+        {
+          label: 'Deal registration action included',
+          passed: body.includes('register'),
+        },
+        {
+          label: 'Tracking link included',
+          passed: Boolean(
+            enrollment &&
+            enrollment.tracking_link &&
+            body.includes(String(enrollment.tracking_link).toLowerCase()),
+          ),
+        },
+      );
+    } else {
+      common.push(
+        {
+          label: 'Positioning guidance included',
+          passed: body.includes('positioning') || body.includes('product pitch'),
+        },
+        {
+          label: 'Support route included',
+          passed: Boolean(
+            program &&
+            program.support_email &&
+            body.includes(String(program.support_email).toLowerCase()),
+          ),
+        },
+      );
+    }
+
+    common.push({
+      label:
+        draft.review_status === 'APPROVED'
+          ? 'Human review approved'
+          : 'Human review required',
+      passed: true,
+    });
+    return common;
+  }
+
+  async function runAction(label, operation) {
+    if (ui.busy) return;
+    ui.busy = true;
+    toast(label, false, true);
+    try {
+      const result = await operation();
+      ui.data = result.state || result;
+      toast('Done');
+      render();
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      ui.busy = false;
+    }
+  }
+
+  function runScan() {
+    runAction('Scanning activations…', () => server('runScanNow'));
+  }
+  function installTrigger() {
+    runAction('Installing trigger…', () => server('installScheduledTrigger'));
+  }
+  function removeTrigger() {
+    runAction('Removing trigger…', () => server('removeScheduledTrigger'));
+  }
+  function setMode(programId, mode) {
+    runAction('Updating mode…', () => server('setProgramProcessingMode', programId, mode));
+  }
+  function processManual(enrollmentId) {
+    runAction('Generating sequence…', () => server('processManualEnrollment', enrollmentId));
+  }
+  function simulate(programId) {
+    const partnerId = document.getElementById('sim-partner').value;
+    const tier = document.getElementById('sim-tier').value;
+    runAction('Simulating activation…', () => server('simulateActivation', partnerId, programId, tier));
+  }
+
+  function selectProgram(id) { ui.selectedProgramId = id; render(); }
+  function selectPartner(id) { ui.selectedPartnerId = id; render(); }
+  function selectReview(key) { ui.selectedReviewKey = key; ui.selectedDay = '0'; render(); }
+  function selectDay(day) { ui.selectedDay = day; render(); }
+
+  function newProgram() {
+    ui.selectedProgramId = '__NEW__';
+    render();
+  }
+  function newPartner() {
+    ui.selectedPartnerId = '__NEW__';
+    render();
+  }
+
+  async function saveProgramForm(event) {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const program = Object.fromEntries(form.entries());
+    const tiers = [...document.querySelectorAll('.tier-row')].map(row => ({
+      tier_name: row.querySelector('[data-field="tier_name"]').value,
+      commission_summary: row.querySelector('[data-field="commission_summary"]').value,
+      bonus_summary: row.querySelector('[data-field="bonus_summary"]').value,
+    })).filter(item => item.tier_name);
+    const resources = [...document.querySelectorAll('.resource-row')].map(row => ({
+      resource_id: row.dataset.id || '',
+      resource_type: row.querySelector('[data-field="resource_type"]').value,
+      resource_name: row.querySelector('[data-field="resource_name"]').value,
+      url: row.querySelector('[data-field="url"]').value,
+    })).filter(item => item.resource_name);
+    const sequence = [...document.querySelectorAll('.sequence-row')].map(row => ({
+      day: row.querySelector('[data-field="day"]').value,
+      goal: row.querySelector('[data-field="goal"]').value,
+      key_message: row.querySelector('[data-field="key_message"]').value,
+      desired_outcome: row.querySelector('[data-field="desired_outcome"]').value,
+    }));
+
+    await runAction('Saving program…', async () => {
+      const data = await server('saveProgram', { program, tiers, resources, sequence });
+      ui.selectedProgramId = normalizeId(program.program_id || program.client_name);
+      return data;
+    });
+  }
+
+  function savePartnerForm(event) {
+    event.preventDefault();
+    const partner = Object.fromEntries(new FormData(event.target).entries());
+    runAction('Saving partner…', async () => {
+      const data = await server('savePartner', partner);
+      ui.selectedPartnerId = normalizeId(partner.partner_id || partner.partner_name);
+      return data;
+    });
+  }
+
+  function saveMembership(partnerId) {
+    const programId = document.getElementById('membership-program').value;
+    const tier = document.getElementById('membership-tier').value;
+    const approvalStatus = document.getElementById('membership-status').value;
+    runAction('Saving membership…', () => server('saveEnrollment', {
+      partner_id: partnerId,
+      program_id: programId,
+      tier,
+      approval_status: approvalStatus,
+    }));
+  }
+
+  function removeMembership(enrollmentId) {
+    runAction('Removing membership…', () => server('removeEnrollment', enrollmentId));
+  }
+  function archiveCurrentProgram() {
+    runAction('Archiving program…', () => server('archiveProgram', ui.selectedProgramId));
+  }
+  function archiveCurrentPartner() {
+    runAction('Archiving partner…', () => server('archivePartner', ui.selectedPartnerId));
+  }
+  function approve(draftId) {
+    runAction('Approving draft…', () => server('approveDraft', draftId));
+  }
+
+  function editDraft(draftId) {
+    const draft = ui.data.drafts.find(item => item.draft_id === draftId);
+    const subject = prompt('Subject', draft.subject);
+    if (subject === null) return;
+    const body = prompt('Body', draft.body);
+    if (body === null) return;
+    runAction('Saving draft…', () => server('updateDraft', {
+      draft_id: draftId,
+      subject,
+      body,
+    }));
+  }
+
+  function addTierRow() {
+    document.getElementById('tier-rows').insertAdjacentHTML('beforeend', tierRow({
+      tier_name: '', commission_summary: '', bonus_summary: '',
+    }));
+  }
+  function addResourceRow() {
+    document.getElementById('resource-rows').insertAdjacentHTML('beforeend', resourceRow({
+      resource_id: '', resource_type: 'OTHER', resource_name: '', url: '',
+    }));
+  }
+  function removeRepeat(button) { button.closest('.repeat-row').remove(); }
+
+  function enrichedEnrollments() {
+    const processed = new Set(ui.data.log.filter(row => row.result === 'DRAFTED').map(row => row.event_key));
+    return ui.data.enrollments.map(enrollment => ({
+      enrollment,
+      partner: partnerById(enrollment.partner_id),
+      program: programById(enrollment.program_id),
+      processed: processed.has(`${enrollment.enrollment_id}|${enrollment.date_status_changed}`),
+    })).filter(item => item.partner && item.program);
+  }
+
+  function reviewGroups() {
+    const groups = {};
+    ui.data.drafts.forEach(draft => {
+      if (!groups[draft.event_key]) {
+        groups[draft.event_key] = {
+          eventKey: draft.event_key,
+          enrollmentId: draft.enrollment_id,
+          partnerId: draft.partner_id,
+          programId: draft.program_id,
+          drafts: [],
+        };
+      }
+      groups[draft.event_key].drafts.push(draft);
+    });
+    return Object.values(groups)
+      .map(group => ({
+        ...group,
+        drafts: group.drafts.sort((a, b) => Number(a.day) - Number(b.day)),
+      }))
+      .reverse();
+  }
+
+  function activePrograms() {
+    return ui.data.programs.filter(item => item.status === 'ACTIVE');
+  }
+  function programById(id) { return ui.data.programs.find(item => item.program_id === id); }
+  function partnerById(id) { return ui.data.partners.find(item => item.partner_id === id); }
+  function enrollmentById(id) { return ui.data.enrollments.find(item => item.enrollment_id === id); }
+
+  function blankProgram() {
+    return {
+      program_id: '',
+      client_name: '',
+      program_name: '',
+      overview: '',
+      brand_voice: '',
+      support_email: '',
+      tracking_link_template: '',
+      coordinator_name: 'Vitor Carro',
+      processing_mode: 'MANUAL',
+      status: 'ACTIVE',
+      tiers: [],
+      resources: [],
+      sequence: defaultSequence(),
+    };
+  }
+  function blankPartner() {
+    return {
+      partner_id: '',
+      partner_name: '',
+      contact_name: '',
+      contact_email: '',
+      record_status: 'ACTIVE',
+    };
+  }
+  function defaultSequence() {
+    return ['0','3','7'].map(day => ({
+      day, goal: '', key_message: '', desired_outcome: '',
+    }));
+  }
+
+  function tierRow(item) {
+    return `<div class="repeat-row tier-row">
+      <input data-field="tier_name" placeholder="Tier" value="${escapeAttr(item.tier_name)}">
+      <input data-field="commission_summary" placeholder="Commission" value="${escapeAttr(item.commission_summary)}">
+      <input data-field="bonus_summary" placeholder="Bonus" value="${escapeAttr(item.bonus_summary)}">
+      <button type="button" class="button ghost" onclick="removeRepeat(this)">×</button>
+    </div>`;
+  }
+  function resourceRow(item) {
+    return `<div class="repeat-row resource resource-row" data-id="${escapeAttr(item.resource_id)}">
+      <select data-field="resource_type">
+        ${['ENABLEMENT','MESSAGING','PORTAL','OTHER'].map(type => `<option ${item.resource_type === type ? 'selected' : ''}>${type}</option>`).join('')}
+      </select>
+      <input data-field="resource_name" placeholder="Resource name" value="${escapeAttr(item.resource_name)}">
+      <input data-field="url" placeholder="https://" value="${escapeAttr(item.url)}">
+      <button type="button" class="button ghost" onclick="removeRepeat(this)">×</button>
+    </div>`;
+  }
+  function sequenceRow(item) {
+    return `<div class="repeat-row sequence sequence-row">
+      <input data-field="day" value="${escapeAttr(item.day)}" readonly>
+      <input data-field="goal" placeholder="Goal" value="${escapeAttr(item.goal)}">
+      <input data-field="key_message" placeholder="Key message" value="${escapeAttr(item.key_message)}">
+      <input data-field="desired_outcome" placeholder="Desired outcome" value="${escapeAttr(item.desired_outcome)}">
+    </div>`;
+  }
+
+  function field(label, name, value = '', required = false, attributes = '', className = '') {
+    return `<label class="field ${className}">${label}
+      <input name="${name}" value="${escapeAttr(value)}" ${required ? 'required' : ''} ${attributes}>
+    </label>`;
+  }
+  function textArea(label, name, value = '', className = '') {
+    return `<label class="field ${className}">${label}<textarea name="${name}">${escapeHtml(value)}</textarea></label>`;
+  }
+  function selectField(label, name, options, value) {
+    return `<label class="field">${label}<select name="${name}">
+      ${options.map(option => `<option ${option === value ? 'selected' : ''}>${option}</option>`).join('')}
+    </select></label>`;
+  }
+  function emptyState(title, copy) {
+    return `<div class="empty"><div><strong>${title}</strong><span>${copy}</span></div></div>`;
+  }
+  function badge(value) {
+    const normalized = String(value || '').toUpperCase();
+    const color = ['ACTIVE','AUTO','APPROVED','DRAFTED'].includes(normalized)
+      ? 'green'
+      : ['PENDING','MANUAL','DRAFT','PAUSED'].includes(normalized)
+        ? 'amber'
+        : ['REJECTED','FAILED','ARCHIVED','REMOVED'].includes(normalized)
+          ? 'red'
+          : 'gray';
+    return `<span class="badge ${color}">${escapeHtml(value || '—')}</span>`;
+  }
+  function initials(value) {
+    return String(value || 'PC').split(/\s+/).map(word => word[0]).join('').slice(0,2).toUpperCase();
+  }
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+  function escapeAttr(value) { return escapeHtml(value).replaceAll('`', '&#096;'); }
+  function normalizeId(value) {
+    return String(value || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  function linkify(value) {
+    return value.replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" target="_blank" style="color:#16835f">$1</a>',
+    );
+  }
+  function toast(message, error = false, loading = false) {
+    const element = document.getElementById('toast');
+    element.textContent = message;
+    element.className = `toast show ${error ? 'error' : ''} ${loading ? 'loading' : ''}`;
+    clearTimeout(toast.timer);
+    if (!loading) {
+      toast.timer = setTimeout(() => element.className = 'toast', 2600);
+    }
+  }
+</script>

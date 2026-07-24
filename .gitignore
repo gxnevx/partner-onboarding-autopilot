@@ -1,0 +1,10 @@
+node_modules/
+.clasp.json
+.env
+.env.*
+!.env.example
+dist/
+coverage/
+*.log
+.playwright-cli/
+dev/preview.html

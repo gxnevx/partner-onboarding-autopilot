@@ -1,0 +1,19 @@
+{
+  "name": "partner-onboarding-autopilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Google Apps Script prototype for multi-program partner onboarding.",
+  "scripts": {
+    "check": "node scripts/validate.mjs",
+    "test": "node scripts/test-generation.mjs",
+    "preview:build": "node scripts/build-preview.mjs",
+    "preview": "node scripts/serve-preview.mjs",
+    "clasp": "clasp",
+    "clasp:status": "clasp status",
+    "clasp:push": "clasp push",
+    "clasp:pull": "clasp pull"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.3.0"
+  }
+}
