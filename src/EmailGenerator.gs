@@ -34,6 +34,8 @@ function buildDraftRecords_(context, generation) {
       throw new Error(`No generated content returned for Day ${day}.`);
     }
 
+    const normalizedBody = normalizeGeneratedEmailBody_(content.body, program);
+
     return {
       draft_id: `DRAFT-${enrollment.enrollment_id}-${enrollment.date_status_changed}-D${day}`,
       event_key: eventKey,
@@ -44,7 +46,11 @@ function buildDraftRecords_(context, generation) {
       key_message: item.key_message,
       desired_outcome: item.desired_outcome,
       subject: String(content.subject || '').trim(),
-      body: normalizeGeneratedEmailBody_(content.body, program),
+      body: enforceRequiredOperationalLinks_(
+        normalizedBody,
+        day,
+        context,
+      ),
       generation_method: generation.method,
       generation_model: generation.model,
       generation_note: generation.note,
@@ -77,6 +83,59 @@ function normalizeGeneratedEmailBody_(body, program) {
   );
 
   return `${normalized.trim()}\n\n${signature}`;
+}
+
+function enforceRequiredOperationalLinks_(body, day, context) {
+  const { enrollment, program, resources } = context;
+  const requiredLines = [];
+  const portal = findResourceUrl_(resources, 'PORTAL');
+  const enablement = findResourceUrl_(resources, 'ENABLEMENT');
+  const normalized = String(body || '');
+
+  if (Number(day) === 0) {
+    if (
+      enrollment.tracking_link &&
+      !normalized.includes(enrollment.tracking_link)
+    ) {
+      requiredLines.push(
+        'Referral tracking link',
+        enrollment.tracking_link,
+      );
+    }
+    if (portal && !normalized.includes(portal)) {
+      requiredLines.push('Partner portal', portal);
+    }
+  }
+
+  if (Number(day) === 3) {
+    if (enablement && !normalized.includes(enablement)) {
+      requiredLines.push('Enablement deck & one-pagers', enablement);
+    }
+    if (portal && !normalized.includes(portal)) {
+      requiredLines.push('Deal registration portal', portal);
+    }
+  }
+
+  if (!requiredLines.length) {
+    return normalized;
+  }
+
+  const signature = [
+    'Best,',
+    program.coordinator_name,
+    `Partner Commerce | ${program.client_name} Partner Program`,
+  ].join('\n');
+  const resourceBlock = requiredLines.join('\n');
+  const signatureMarker = `\n\n${signature}`;
+
+  if (normalized.includes(signatureMarker)) {
+    return normalized.replace(
+      signatureMarker,
+      `\n\n${resourceBlock}${signatureMarker}`,
+    );
+  }
+
+  return `${normalized.trim()}\n\n${resourceBlock}`;
 }
 
 function generateTemplateEmailContents_(context) {

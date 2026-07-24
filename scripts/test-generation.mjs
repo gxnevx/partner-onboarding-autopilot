@@ -84,6 +84,25 @@ assert.match(drafts[2].body, /accounting automation/i);
 assert.match(drafts[2].body, /partners@ledgerly\.io/);
 assert.doesNotMatch(drafts[2].body, /https:\/\/www\.example3\.com/);
 assert.doesNotMatch(drafts[2].body, /commission/i);
+
+const hydratedDay0 = sandbox.enforceRequiredOperationalLinks_(
+  'Hi Priya,\\n\\nWelcome.\\n\\nBest,\\nVitor Carro\\nPartner Commerce | Ledgerly Partner Program',
+  0,
+  {
+    enrollment: {
+      tracking_link: 'https://ledgerly.io/ref/P-1044',
+    },
+    program: {
+      client_name: 'Ledgerly',
+      coordinator_name: 'Vitor Carro',
+    },
+    resources: [
+      { resource_type: 'PORTAL', url: 'https://www.example3.com' },
+    ],
+  },
+);
+assert.match(hydratedDay0, /Referral tracking link\nhttps:\/\/ledgerly\.io\/ref\/P-1044/);
+assert.match(hydratedDay0, /Partner portal\nhttps:\/\/www\.example3\.com/);
 assert.ok(drafts.every(draft => draft.review_status === 'DRAFT'));
 assert.equal(
   sandbox.buildEventKey_({

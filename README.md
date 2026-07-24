@@ -6,7 +6,7 @@ A working Google Apps Script prototype that turns a partner approval into a revi
 
 The exercise asks for the logic behind the automation and the message strategy. This implementation keeps those two things visible: Google Sheets is the simulated operational source, Apps Script detects activation events, and OpenAI turns a human-authored sequence blueprint into personalized drafts. The web app keeps every draft reviewable before sending.
 
-[Open the live demo](https://script.google.com/macros/s/AKfycbymvsyhZ-X41CdCmCQYlZ8GQEfN9nomtsb3uRilPO8iIWtRCEjqxbuLW17itCBtygtvMA/exec)
+[Open the live demo](https://script.google.com/macros/s/AKfycbwAqD8KHJiUHngQZtNQ5BLjgBacQLkm1e-jXnfLzqzpj_W3G8mMYHiuA03-ICOqli5seg/exec)
 
 ![Grounded Day 7 email review](docs/assets/email-review-grounded.jpg)
 

@@ -286,7 +286,11 @@ function regenerateDraft(draftId) {
     draft.key_message = strategy.key_message;
     draft.desired_outcome = strategy.desired_outcome;
     draft.subject = generation.email.subject;
-    draft.body = generation.email.body;
+    draft.body = enforceRequiredOperationalLinks_(
+      normalizeGeneratedEmailBody_(generation.email.body, program),
+      Number(draft.day),
+      { enrollment, program, resources },
+    );
     draft.generation_method = generation.method;
     draft.generation_model = generation.model;
     draft.generation_note = generation.note;
