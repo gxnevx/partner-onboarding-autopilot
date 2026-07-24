@@ -42,4 +42,6 @@ They are short, operational, and personalized with the partner, contact, tier, c
 
 The operator owns the strategy: goal, key message, and desired outcome. OpenAI is the writing layer that turns those constraints into subject lines and bodies. Structured Outputs keeps the Day 0 / Day 3 / Day 7 shape predictable, and the deterministic generator remains as an explicit fallback.
 
+The writing prompt also enforces a presentation contract: short separated content blocks, numbered Day 3 actions, labeled URLs without trailing punctuation, and the exact program-coordinator signature. The review UI renders those blocks as email paragraphs and lists instead of a raw text wall.
+
 Human review stays visible because brand-sensitive partner communication should not be silently sent by a prototype. The operator can edit, regenerate only the selected day, delete that draft, or approve it into a simulated `SENT` state.

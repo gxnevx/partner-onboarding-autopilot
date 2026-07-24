@@ -552,9 +552,10 @@
                     <span>to ${escapeHtml(partner ? partner.contact_name : draft.partner_id)} · Day ${draft.day}</span></div>
                 </div>
               </div>
-              <div class="email-body">${linkify(escapeHtml(draft.body))}</div>
+              <div class="email-body">${formatEmailBody(draft.body)}</div>
             </article>
             <div class="review-actions">
+              <button class="button danger" onclick="removeAllDrafts('${escapeAttr(selected.eventKey)}')">Delete all drafts</button>
               <button class="button danger" onclick="removeDraft('${draft.draft_id}')">Delete draft</button>
               <button class="button secondary" onclick="editDraft('${draft.draft_id}')">Edit draft</button>
               <button class="button secondary" onclick="regenerate('${draft.draft_id}')">Regenerate this email</button>
@@ -838,6 +839,13 @@
     runAction('Deleting draft…', () => server('deleteDraft', draftId));
   }
 
+  function removeAllDrafts(eventKey) {
+    if (!confirm('Delete all drafts in this sequence? This removes Day 0, Day 3, and Day 7.')) return;
+    runAction('Deleting all drafts in this sequence…', () =>
+      server('deleteDraftsForEvent', eventKey),
+    );
+  }
+
   function editDraft(draftId) {
     const draft = ui.data.drafts.find(item => item.draft_id === draftId);
     const subject = prompt('Subject', draft.subject);
@@ -1027,10 +1035,29 @@
       .replace(/^-+|-+$/g, '');
   }
   function linkify(value) {
-    return value.replace(
-      /(https?:\/\/[^\s<]+)/g,
-      '<a href="$1" target="_blank" style="color:#16835f">$1</a>',
-    );
+    return value.replace(/https?:\/\/[^\s<]+/g, match => {
+      const trailing = (match.match(/[.,;:!?]+$/) || [''])[0];
+      const url = trailing ? match.slice(0, -trailing.length) : match;
+      return `<a href="${url}" target="_blank">${url}</a>${trailing}`;
+    });
+  }
+  function formatEmailBody(value) {
+    const blocks = String(value || '')
+      .trim()
+      .split(/\n\s*\n/)
+      .filter(Boolean);
+
+    return blocks.map(block => {
+      const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
+      const isNumberedList =
+        lines.length > 1 && lines.every(line => /^\d+\.\s/.test(line));
+      if (isNumberedList) {
+        return `<ol>${lines.map(line =>
+          `<li>${linkify(escapeHtml(line.replace(/^\d+\.\s*/, '')))}</li>`,
+        ).join('')}</ol>`;
+      }
+      return `<p>${lines.map(line => linkify(escapeHtml(line))).join('<br>')}</p>`;
+    }).join('');
   }
   function toast(message, error = false, loading = false) {
     const element = document.getElementById('toast');

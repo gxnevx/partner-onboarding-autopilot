@@ -6,7 +6,7 @@ A working Google Apps Script prototype that turns a partner approval into a revi
 
 The exercise asks for the logic behind the automation and the message strategy. This implementation keeps those two things visible: Google Sheets is the simulated operational source, Apps Script detects activation events, and OpenAI turns a human-authored sequence blueprint into personalized drafts. The web app keeps every draft reviewable before sending.
 
-[Open the live demo](https://script.google.com/macros/s/AKfycbzI5dO4qsS2COz1ZUlura9qmhrS8s_ajkS7dKuwC7OVgPpRzEBMjbowkZKpySELQfatpw/exec)
+[Open the live demo](https://script.google.com/macros/s/AKfycbzSi2P_GCarNSFUTMXPNqxdhrFJfa44Xa0f1iAduFyIhQgogkFeBjGj4Yc03NiZ8wXP5Q/exec)
 
 ![Email review workspace](docs/assets/email-review.png)
 
@@ -21,9 +21,10 @@ The exercise asks for the logic behind the automation and the message strategy. 
 - A human defines the goal, key message, and desired outcome for each touchpoint.
 - OpenAI writes the subjects and bodies from those strategic constraints plus the partner and program context.
 - Structured Outputs enforces a Day 0 / Day 3 / Day 7 response shape; deterministic templates remain as a visible fallback.
+- Email bodies follow a controlled layout with short content blocks, numbered actions, clean resource links, and a standardized signature.
 - Partners can be added, archived, and approved for different programs and tiers.
 - Generated emails have a realistic preview plus an explicit key message and desired outcome.
-- Drafts remain human-reviewable: edit, regenerate one touchpoint, delete it, or approve it. Approval records a simulated `SENT` state; no real email is delivered.
+- Drafts remain human-reviewable: edit, regenerate one touchpoint, delete one draft or the entire selected sequence, or approve it. Approval records a simulated `SENT` state; no real email is delivered.
 
 ## Product walkthrough
 

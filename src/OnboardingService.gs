@@ -220,6 +220,20 @@ function deleteDraft(draftId) {
   });
 }
 
+function deleteDraftsForEvent(eventKey) {
+  return withScriptLock_(() => {
+    const drafts = readRows_('drafts').filter(
+      draft => draft.event_key === eventKey,
+    );
+    if (!drafts.length) {
+      throw new Error(`No drafts found for event: ${eventKey}`);
+    }
+
+    replaceChildRows_('drafts', 'event_key', eventKey, []);
+    return buildAppState_();
+  });
+}
+
 function regenerateDraft(draftId) {
   return withScriptLock_(() => {
     const draft = findById_('drafts', 'draft_id', draftId);

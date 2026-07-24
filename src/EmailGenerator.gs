@@ -43,8 +43,8 @@ function buildDraftRecords_(context, generation) {
       day: String(day),
       key_message: item.key_message,
       desired_outcome: item.desired_outcome,
-      subject: content.subject,
-      body: content.body,
+      subject: String(content.subject || '').trim(),
+      body: normalizeGeneratedEmailBody_(content.body, program),
       generation_method: generation.method,
       generation_model: generation.model,
       generation_note: generation.note,
@@ -53,6 +53,30 @@ function buildDraftRecords_(context, generation) {
       updated_at: generatedAt,
     };
   });
+}
+
+function normalizeGeneratedEmailBody_(body, program) {
+  const signature = [
+    'Best,',
+    program.coordinator_name,
+    `Partner Commerce | ${program.client_name} Partner Program`,
+  ].join('\n');
+  let normalized = String(body || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  normalized = normalized.replace(
+    /\n{2,}(?:Best|Thanks|Thank you|Regards|Sincerely|Warm regards|—|-)[\s\S]*$/i,
+    '',
+  );
+  normalized = normalized.replace(
+    /^(Hi [^,\n]+,)[ \t]+(?=\S)/i,
+    '$1\n\n',
+  );
+
+  return `${normalized.trim()}\n\n${signature}`;
 }
 
 function generateTemplateEmailContents_(context) {
