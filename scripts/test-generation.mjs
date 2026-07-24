@@ -77,7 +77,13 @@ assert.match(drafts[0].body, /25%/);
 assert.match(drafts[0].body, /\$500 bonus/);
 assert.match(drafts[0].body, /https:\/\/ledgerly\.io\/ref\/P-1044/);
 assert.match(drafts[1].body, /https:\/\/www\.example1\.com/);
-assert.match(drafts[2].body, /https:\/\/www\.example2\.com/);
+assert.match(drafts[1].body, /https:\/\/www\.example3\.com/);
+assert.doesNotMatch(drafts[1].body, /https:\/\/ledgerly\.io\/ref\/P-1044/);
+assert.doesNotMatch(drafts[1].body, /commission/i);
+assert.match(drafts[2].body, /accounting automation/i);
+assert.match(drafts[2].body, /partners@ledgerly\.io/);
+assert.doesNotMatch(drafts[2].body, /https:\/\/www\.example3\.com/);
+assert.doesNotMatch(drafts[2].body, /commission/i);
 assert.ok(drafts.every(draft => draft.review_status === 'DRAFT'));
 assert.equal(
   sandbox.buildEventKey_({

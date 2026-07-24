@@ -6,9 +6,9 @@ A working Google Apps Script prototype that turns a partner approval into a revi
 
 The exercise asks for the logic behind the automation and the message strategy. This implementation keeps those two things visible: Google Sheets is the simulated operational source, Apps Script detects activation events, and OpenAI turns a human-authored sequence blueprint into personalized drafts. The web app keeps every draft reviewable before sending.
 
-[Open the live demo](https://script.google.com/macros/s/AKfycbzSi2P_GCarNSFUTMXPNqxdhrFJfa44Xa0f1iAduFyIhQgogkFeBjGj4Yc03NiZ8wXP5Q/exec)
+[Open the live demo](https://script.google.com/macros/s/AKfycbymvsyhZ-X41CdCmCQYlZ8GQEfN9nomtsb3uRilPO8iIWtRCEjqxbuLW17itCBtygtvMA/exec)
 
-![Email review workspace](docs/assets/email-review.png)
+![Grounded Day 7 email review](docs/assets/email-review-grounded.jpg)
 
 ## What the prototype demonstrates
 
@@ -19,7 +19,9 @@ The exercise asks for the logic behind the automation and the message strategy. 
 - Every activation event is idempotent: the same enrollment/status-change date cannot create duplicate sequences.
 - Program details, commission tiers, resources, brand voice, and sequence strategy are editable.
 - A human defines the goal, key message, and desired outcome for each touchpoint.
-- OpenAI writes the subjects and bodies from those strategic constraints plus the partner and program context.
+- OpenAI writes the subjects and bodies from those strategic constraints plus a day-scoped allowlist of partner and program facts.
+- Each onboarding resource can carry approved AI context because placeholder URLs are not fetched or read by the model.
+- Server-side grounding checks reject missing required facts and off-brief Day 7 commercial content.
 - Structured Outputs enforces a Day 0 / Day 3 / Day 7 response shape; deterministic templates remain as a visible fallback.
 - Email bodies follow a controlled layout with short content blocks, numbered actions, clean resource links, and a standardized signature.
 - Partners can be added, archived, and approved for different programs and tiers.
@@ -76,7 +78,7 @@ That separation lets one partner participate in multiple client programs with di
 | --- | --- | --- |
 | Day 0 | You are approved and have everything you need to begin. | Open the portal and save the tracking link. |
 | Day 3 | The fastest path to activation is one well-matched registered opportunity. | Identify and register a first potential deal. |
-| Day 7 | Lead with the finance team's workflow challenge, not a product pitch. | Position Ledgerly credibly and ask for help if blocked. |
+| Day 7 | Position Ledgerly as accounting automation for mid-market finance teams in a practical, peer-to-peer way. | Feel supported and use one clear positioning tip with a finance leader. |
 
 The sequence moves from **access → first action → confident positioning**. More detail is in [docs/email-strategy.md](docs/email-strategy.md).
 

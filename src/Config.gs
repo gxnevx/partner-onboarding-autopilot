@@ -40,6 +40,7 @@ const APP_CONFIG = Object.freeze({
       'resource_type',
       'resource_name',
       'url',
+      'ai_context',
     ],
     sequence: [
       'program_id',

@@ -93,7 +93,6 @@ function generateTemplateEmailContents_(context) {
     .split(/\s+/)[0];
   const portal = findResourceUrl_(resources, 'PORTAL');
   const enablement = findResourceUrl_(resources, 'ENABLEMENT');
-  const messaging = findResourceUrl_(resources, 'MESSAGING');
   const commission = [
     tier ? tier.commission_summary : '',
     tier ? tier.bonus_summary : '',
@@ -115,7 +114,6 @@ function generateTemplateEmailContents_(context) {
           commission,
           portal,
           enablement,
-          messaging,
         }),
       };
     }),
@@ -135,7 +133,6 @@ function buildEmailContent_(context) {
     commission,
     portal,
     enablement,
-    messaging,
   } = context;
   const signature = `${program.coordinator_name}\nPartner Commerce | ${program.client_name} Partner Program`;
 
@@ -173,8 +170,8 @@ function buildEmailContent_(context) {
         `A practical first step is to identify one prospect that matches the ${program.client_name} program and register the opportunity before making the introduction.`,
         '',
         `1. Review the enablement materials: ${enablement}`,
-        `2. Register the opportunity in the partner portal: ${portal}`,
-        `3. Use your referral link: ${enrollment.tracking_link}`,
+        '2. Identify one well-matched opportunity.',
+        `3. Register the opportunity in the partner portal: ${portal}`,
         '',
         'Quick-start tip: register the deal first so tracking and program support are in place from the beginning.',
         '',
@@ -193,9 +190,7 @@ function buildEmailContent_(context) {
       '',
       `Checking in to see whether you have everything you need to introduce ${program.client_name} to the right prospects.`,
       '',
-      `One positioning tip: start with the prospect's operational challenge, then explain where ${program.client_name} fits. Keep the conversation practical and peer-to-peer rather than leading with a product pitch.`,
-      '',
-      messaging ? `Messaging guidelines: ${messaging}` : '',
+      `One positioning tip: describe ${program.client_name} as accounting automation for mid-market finance teams, keeping the introduction practical and peer-to-peer rather than salesy.`,
       '',
       `If you would like help thinking through a potential fit or introduction, contact ${program.support_email}.`,
       '',

@@ -75,6 +75,8 @@ function seedDemoData_() {
       resource_type: 'ENABLEMENT',
       resource_name: 'Partner enablement deck & one-pagers',
       url: 'https://www.example1.com',
+      ai_context:
+        'Use this resource on Day 3 to help the partner prepare for a first qualified opportunity.',
     },
     {
       resource_id: 'RES-LEDGERLY-MESSAGING',
@@ -82,6 +84,8 @@ function seedDemoData_() {
       resource_type: 'MESSAGING',
       resource_name: 'Co-branded messaging guidelines',
       url: 'https://www.example2.com',
+      ai_context:
+        'Position Ledgerly as accounting automation for mid-market finance teams. Keep the introduction practical, peer-to-peer, and not salesy. Do not invent pain points, metrics, features, or outcomes.',
     },
     {
       resource_id: 'RES-LEDGERLY-PORTAL',
@@ -89,6 +93,8 @@ function seedDemoData_() {
       resource_type: 'PORTAL',
       resource_name: 'Partner portal',
       url: 'https://www.example3.com',
+      ai_context:
+        'Use this portal for deal registration and commission tracking.',
     },
   ].forEach(row => appendRow_('resources', row));
 
@@ -117,11 +123,11 @@ function seedDemoData_() {
       program_id: 'LEDGERLY',
       day: '7',
       goal:
-        'Check in, offer help, and reinforce credible positioning.',
+        'Friendly check-in, offer help, and share one tip on positioning Ledgerly to finance leaders.',
       key_message:
-        'Lead with the finance team’s workflow challenge, not a product pitch.',
+        'Position Ledgerly as accounting automation for mid-market finance teams in a practical, peer-to-peer way.',
       desired_outcome:
-        'The partner can position Ledgerly credibly and asks for help if blocked.',
+        'The partner feels supported and can use one clear Ledgerly positioning tip with a finance leader.',
     },
   ].forEach(row => appendRow_('sequence', row));
 

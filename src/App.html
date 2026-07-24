@@ -373,7 +373,7 @@
         </div>
         <div class="subsection">
           <h3>Onboarding resources</h3>
-          <p class="subsection-copy">Links the AI may include when relevant: enablement materials, messaging guidance, and the portal for deal registration and commission tracking.</p>
+          <p class="subsection-copy">Links plus approved context the AI may use. The API does not open placeholder URLs, so the AI context explains the resource without inviting invented claims.</p>
           <div id="resource-rows">
             ${(program.resources || []).map(resourceRow).join('')}
           </div>
@@ -603,6 +603,9 @@
       .split(/\s+/)[0]
       .toLowerCase();
     const programName = String(program ? program.client_name : '').toLowerCase();
+    const tier = program && enrollment
+      ? (program.tiers || []).find(item => item.tier_name === enrollment.tier)
+      : null;
     const common = [
       {
         label: 'Partner personalized',
@@ -620,11 +623,12 @@
     if (String(draft.day) === '0') {
       common.push(
         {
-          label: 'Tier and commission applied',
+          label: 'Tier and exact commission included',
           passed: Boolean(
             enrollment &&
             body.includes(String(enrollment.tier || '').toLowerCase()) &&
-            body.includes('commission'),
+            tier &&
+            body.includes(String(tier.commission_summary || '').toLowerCase()),
           ),
         },
         {
@@ -651,19 +655,26 @@
           passed: body.includes('register'),
         },
         {
-          label: 'Tracking link included',
+          label: 'One quick-start tip included',
+          passed: body.includes('quick-start tip') || body.includes('quick start tip'),
+        },
+        {
+          label: 'No Day 0 commercial content',
           passed: Boolean(
             enrollment &&
-            enrollment.tracking_link &&
-            body.includes(String(enrollment.tracking_link).toLowerCase()),
+            !body.includes(String(enrollment.tracking_link || '').toLowerCase()) &&
+            !body.includes('commission') &&
+            !body.includes('bonus'),
           ),
         },
       );
     } else {
       common.push(
         {
-          label: 'Positioning guidance included',
-          passed: body.includes('positioning') || body.includes('product pitch'),
+          label: 'One grounded finance-leader tip',
+          passed:
+            body.includes('accounting automation') &&
+            body.includes('finance'),
         },
         {
           label: 'Support route included',
@@ -671,6 +682,15 @@
             program &&
             program.support_email &&
             body.includes(String(program.support_email).toLowerCase()),
+          ),
+        },
+        {
+          label: 'No off-brief commercial content',
+          passed: Boolean(
+            enrollment &&
+            !body.includes(String(enrollment.tracking_link || '').toLowerCase()) &&
+            !body.includes('commission') &&
+            !body.includes('bonus'),
           ),
         },
       );
@@ -778,6 +798,7 @@
       resource_type: row.querySelector('[data-field="resource_type"]').value,
       resource_name: row.querySelector('[data-field="resource_name"]').value,
       url: row.querySelector('[data-field="url"]').value,
+      ai_context: row.querySelector('[data-field="ai_context"]').value,
     })).filter(item => item.resource_name);
     const sequence = [...document.querySelectorAll('.sequence-row')].map(row => ({
       day: row.querySelector('[data-field="day"]').value,
@@ -866,7 +887,7 @@
   }
   function addResourceRow() {
     document.getElementById('resource-rows').insertAdjacentHTML('beforeend', resourceRow({
-      resource_id: '', resource_type: 'OTHER', resource_name: '', url: '',
+      resource_id: '', resource_type: 'OTHER', resource_name: '', url: '', ai_context: '',
     }));
   }
   function removeRepeat(button) { button.closest('.repeat-row').remove(); }
@@ -956,7 +977,8 @@
         ${['ENABLEMENT','MESSAGING','PORTAL','OTHER'].map(type => `<option ${item.resource_type === type ? 'selected' : ''}>${type}</option>`).join('')}
       </select>
       <input data-field="resource_name" placeholder="Resource name" value="${escapeAttr(item.resource_name)}">
-      <input data-field="url" placeholder="https://" value="${escapeAttr(item.url)}">
+      <input data-field="url" placeholder="Resource URL" value="${escapeAttr(item.url)}">
+      <input data-field="ai_context" placeholder="Approved AI context / how to use it" value="${escapeAttr(item.ai_context)}">
       <button type="button" class="button ghost" onclick="removeRepeat(this)">×</button>
     </div>`;
   }

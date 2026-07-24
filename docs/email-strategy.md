@@ -24,11 +24,11 @@ The second message turns passive approval into a concrete behavior. It gives a s
 
 ## Day 7 — improve confidence and message quality
 
-**Key message:** Lead with the finance team's workflow challenge, not a product pitch.
+**Key message:** Position Ledgerly as accounting automation for mid-market finance teams in a practical, peer-to-peer way.
 
-**Desired outcome:** The partner can position Ledgerly credibly and asks for help if blocked.
+**Desired outcome:** The partner feels supported and can use one clear Ledgerly positioning tip with a finance leader.
 
-The final message does not repeat setup instructions. It addresses the next likely obstacle: how to introduce Ledgerly without sounding like a reseller. The finance-leader-to-finance-leader framing follows the supplied brand guidance.
+The final message follows the exercise literally: a friendly check-in, an offer of help, and one positioning tip. The tip uses only the supplied overview and brand voice; it does not invent finance pain points, workflows, metrics, or product capabilities.
 
 ## Why the sequence works
 
@@ -38,10 +38,20 @@ The messages deliberately progress through:
 Access → Action → Confidence
 ```
 
-They are short, operational, and personalized with the partner, contact, tier, commission, program resources, and tracking link.
+## Context boundaries
+
+| Day | Context the AI may use | Context kept out |
+| --- | --- | --- |
+| Day 0 | Approval, tier, commission, tracking link, portal login | Enablement deck and messaging guidance |
+| Day 3 | Enablement deck, portal for deal registration, support | Tracking link, tier, commission, bonus, and messaging guidance |
+| Day 7 | Approved Ledgerly positioning and support | Tracking link, portal, deal registration, tier, commission, bonus, and activation steps |
+
+The portal appears on Day 0 for initial access and on Day 3 because the supplied program details explicitly say it is where a partner registers a deal. Its role changes; the context does not bleed.
+
+They are short, operational, and personalized with only the context relevant to that day. Tier, commission, tracking link, and portal belong to Day 0; enablement and deal registration belong to Day 3; approved product positioning and support belong to Day 7.
 
 The operator owns the strategy: goal, key message, and desired outcome. OpenAI is the writing layer that turns those constraints into subject lines and bodies. Structured Outputs keeps the Day 0 / Day 3 / Day 7 shape predictable, and the deterministic generator remains as an explicit fallback.
 
-The writing prompt also enforces a presentation contract: short separated content blocks, numbered Day 3 actions, labeled URLs without trailing punctuation, and the exact program-coordinator signature. The review UI renders those blocks as email paragraphs and lists instead of a raw text wall.
+The writing prompt also enforces a content contract and a presentation contract. Each day receives an allowlist of approved facts, required content, and prohibited content. The server validates the result before saving it. Formatting rules keep content in short blocks, make Day 3 actions numbered, preserve exact URLs, and use the exact program-coordinator signature.
 
 Human review stays visible because brand-sensitive partner communication should not be silently sent by a prototype. The operator can edit, regenerate only the selected day, delete that draft, or approve it into a simulated `SENT` state.

@@ -40,6 +40,7 @@ function saveProgram(payload) {
       resource_type: resource.resource_type || 'OTHER',
       resource_name: resource.resource_name || 'Resource',
       url: resource.url || '',
+      ai_context: resource.ai_context || '',
     }));
 
     const sequence = (payload.sequence || []).map(item => ({
