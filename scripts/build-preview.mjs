@@ -51,7 +51,14 @@ const html = `<!doctype html>
   </head>
   <body>
     <div id="app">
-      <div class="boot"><div class="boot-mark">PC</div><p>Loading partner operations…</p></div>
+      <div class="boot">
+        <img
+          class="boot-logo"
+          src="https://partnercommerce.com/wp-content/uploads/2025/05/logo.png"
+          alt="Partner Commerce"
+        >
+        <p>Loading partner operations&hellip;</p>
+      </div>
     </div>
     <div id="toast" class="toast" aria-live="polite"></div>
     ${mock}

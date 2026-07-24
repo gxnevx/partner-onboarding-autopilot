@@ -55,11 +55,11 @@
       <div class="shell">
         <aside class="sidebar">
           <div class="brand">
-            <div class="brand-mark">PC</div>
-            <div class="brand-copy">
-              <strong>Partner Autopilot</strong>
-              <span>Operations workspace</span>
-            </div>
+            <img
+              class="brand-logo"
+              src="https://partnercommerce.com/wp-content/uploads/2025/05/logo.png"
+              alt="Partner Commerce"
+            >
           </div>
           <nav class="nav">
             ${navButton('activations', '01', 'Activations')}
@@ -68,8 +68,8 @@
             ${navButton('reviews', '04', 'Email Reviews')}
           </nav>
           <div class="sidebar-foot">
-            Google Sheets data source<br>
-            Apps Script Web App
+            <strong>Onboarding Autopilot</strong><br>
+            Google Sheets + Apps Script
           </div>
         </aside>
         <main class="main">
@@ -91,7 +91,8 @@
   function navButton(route, number, label) {
     return `
       <button class="${ui.route === route ? 'active' : ''}" onclick="navigate('${route}')">
-        <span>${number}</span> <span class="nav-label">${label}</span>
+        <span class="nav-marker"></span>
+        <span class="nav-label">${label}</span>
       </button>
     `;
   }
@@ -117,14 +118,16 @@
       programs.find(item => item.program_id === ui.selectedProgramId) ||
       programs[0];
     const trigger = ui.data.meta.trigger;
+    const generatedSequences = reviewGroups().length;
 
     return `
       <div class="status-strip">
         <div>
-          <strong>Scheduled processing</strong>
+          <span class="status-dot ${trigger.installed ? 'on' : ''}"></span>
+          <strong>${trigger.installed ? 'Automation is running' : 'Automation is paused'}</strong>
           <span>${trigger.installed
-            ? `Runs every ${trigger.intervalMinutes} minutes`
-            : 'Trigger not installed'}</span>
+            ? `Checks the Sheet every ${trigger.intervalMinutes} minutes`
+            : 'No scheduled trigger installed'}</span>
         </div>
         <div class="toolbar">
           <button class="button secondary" onclick="${trigger.installed
@@ -132,9 +135,25 @@
             : 'installTrigger()'}">
             ${trigger.installed ? 'Remove trigger' : 'Install trigger'}
           </button>
-          <button class="button" onclick="runScan()">Run scan now</button>
+          <button class="button" onclick="runScan()">Check for activations now</button>
         </div>
       </div>
+      <section class="flow-explainer">
+        <div class="flow-intro">
+          <span class="kicker">What this prototype does</span>
+          <h2>Approval in. Onboarding sequence out.</h2>
+          <p>The Sheet simulates the partner platform. A status change is the event that starts the workflow.</p>
+        </div>
+        <div class="flow-steps">
+          ${flowStep('1', 'Approve', 'A partner moves from Pending to Active.')}
+          ${flowStep('2', 'Detect', 'Auto runs immediately; Manual waits for review.')}
+          ${flowStep('3', 'Draft', 'Day 0, 3, and 7 emails are generated.')}
+        </div>
+        <div class="flow-output">
+          <strong>${generatedSequences}</strong>
+          <span>sequences generated</span>
+        </div>
+      </section>
       <div class="page-grid">
         <section class="rail">
           <div class="section-head">
@@ -158,7 +177,7 @@
             <div class="workspace-title">
               <div>
                 <h2>${escapeHtml(selectedProgram.program_name)}</h2>
-                <p>${escapeHtml(selectedProgram.overview)}</p>
+                <p>${escapeHtml(selectedProgram.overview)} Choose how new approvals are handled.</p>
               </div>
               <div class="toggle">
                 <button class="${selectedProgram.processing_mode === 'MANUAL' ? 'active' : ''}"
@@ -175,14 +194,26 @@
                 : emptyState('Queue is clear', 'No unprocessed Active enrollments for this program.')}
             </div>
             <div class="subsection">
-              <div class="workspace-title" style="margin-bottom:14px">
-                <div><h2 style="font-size:17px">Demo controls</h2>
-                  <p>Simulate the upstream platform approving a partner.</p></div>
+              <div class="workspace-title demo-heading">
+                <div>
+                  <span class="kicker">Interactive demo</span>
+                  <h2>Simulate a partner approval</h2>
+                  <p>This changes one enrollment in the Google Sheet from Pending to Active.</p>
+                </div>
               </div>
               ${renderSimulationForm(selectedProgram)}
             </div>
           ` : emptyState('No active program', 'Create or reactivate a program first.')}
         </section>
+      </div>
+    `;
+  }
+
+  function flowStep(number, title, copy) {
+    return `
+      <div class="flow-step">
+        <span>${number}</span>
+        <div><strong>${title}</strong><p>${copy}</p></div>
       </div>
     `;
   }
@@ -203,23 +234,71 @@
   }
 
   function renderSimulationForm(program) {
-    const available = ui.data.partners.filter(item => item.record_status === 'ACTIVE');
+    const programEnrollments = ui.data.enrollments.filter(
+      item => item.program_id === program.program_id,
+    );
+    const pendingIds = new Set(
+      programEnrollments
+        .filter(item => item.approval_status === 'PENDING')
+        .map(item => item.partner_id),
+    );
+    const activePartners = ui.data.partners.filter(
+      item => item.record_status === 'ACTIVE',
+    );
+    const available = activePartners.filter(item => pendingIds.has(item.partner_id));
     const tiers = program.tiers || [];
     return `
-      <div class="field-grid">
-        <label class="field">Partner
-          <select id="sim-partner">
-            ${available.map(partner => `<option value="${partner.partner_id}">${escapeHtml(partner.partner_name)}</option>`).join('')}
-          </select>
-        </label>
-        <label class="field">Tier
-          <select id="sim-tier">
-            ${tiers.map(tier => `<option value="${escapeAttr(tier.tier_name)}">${escapeHtml(tier.tier_name)}</option>`).join('')}
-          </select>
-        </label>
-        <div class="full">
-          <button class="button secondary" onclick="simulate('${program.program_id}')">Simulate activation</button>
+      <div class="simulation-panel">
+        <div class="simulation-form">
+          <div class="numbered-field">
+            <span>1</span>
+            <label class="field">Choose a ${available.length ? 'pending ' : ''}partner
+              <select id="sim-partner">
+                ${available.length
+                  ? available.map(partner => `<option value="${partner.partner_id}">${escapeHtml(partner.partner_name)}</option>`).join('')
+                  : '<option value="">No pending partners — reset one first</option>'}
+              </select>
+            </label>
+          </div>
+          <div class="numbered-field">
+            <span>2</span>
+            <label class="field">Confirm commission tier
+              <select id="sim-tier">
+                ${tiers.map(tier => `<option value="${escapeAttr(tier.tier_name)}">${escapeHtml(tier.tier_name)}</option>`).join('')}
+              </select>
+            </label>
+          </div>
+          <div class="simulation-action">
+            <span class="step-number">3</span>
+            <div>
+              <button class="button success" onclick="simulate('${program.program_id}')" ${available.length ? '' : 'disabled'}>
+                Approve partner and run workflow
+              </button>
+              <p>${program.processing_mode === 'AUTO'
+                ? 'Automatic mode will generate the three drafts and open Email Reviews.'
+                : 'Manual mode will place the approval in the queue above.'}</p>
+            </div>
+          </div>
         </div>
+        <aside class="simulation-note">
+          <span class="kicker">Need to replay it?</span>
+          <strong>${available.length
+            ? `${available.length} pending partner${available.length === 1 ? '' : 's'} available`
+            : 'All demo partners are active'}</strong>
+          <p>Reset the selected partner to Pending, then approve it again. Each replay receives a new event timestamp.</p>
+          <select id="reset-partner" aria-label="Partner to reset">
+            ${activePartners.map(partner => {
+              const enrollment = programEnrollments.find(
+                item => item.partner_id === partner.partner_id,
+              );
+              const status = enrollment ? enrollment.approval_status : 'NOT ENROLLED';
+              return `<option value="${partner.partner_id}">${escapeHtml(partner.partner_name)} — ${escapeHtml(status)}</option>`;
+            }).join('')}
+          </select>
+          <button class="text-button" onclick="resetSimulation('${program.program_id}')">
+            Reset selected partner to Pending
+          </button>
+        </aside>
       </div>
     `;
   }
@@ -591,8 +670,10 @@
       ui.data = result.state || result;
       toast('Done');
       render();
+      return result;
     } catch (error) {
       toast(error.message, true);
+      return null;
     } finally {
       ui.busy = false;
     }
@@ -610,13 +691,38 @@
   function setMode(programId, mode) {
     runAction('Updating mode…', () => server('setProgramProcessingMode', programId, mode));
   }
-  function processManual(enrollmentId) {
-    runAction('Generating sequence…', () => server('processManualEnrollment', enrollmentId));
+  async function processManual(enrollmentId) {
+    const result = await runAction('Generating sequence...', () =>
+      server('processManualEnrollment', enrollmentId),
+    );
+    if (result && result.processing && result.processing.eventKey) {
+      openGeneratedSequence(result.processing.eventKey);
+    }
   }
-  function simulate(programId) {
+  async function simulate(programId) {
     const partnerId = document.getElementById('sim-partner').value;
     const tier = document.getElementById('sim-tier').value;
-    runAction('Simulating activation…', () => server('simulateActivation', partnerId, programId, tier));
+    const result = await runAction('Approving partner and generating 3 drafts...', () =>
+      server('simulateActivation', partnerId, programId, tier),
+    );
+    if (
+      result &&
+      result.processing &&
+      result.processing.result === 'DRAFTED'
+    ) {
+      openGeneratedSequence(result.processing.eventKey);
+    }
+  }
+  function resetSimulation(programId) {
+    const partnerId = document.getElementById('reset-partner').value;
+    runAction('Resetting partner to Pending...', () =>
+      server('resetEnrollmentForDemo', partnerId, programId),
+    );
+  }
+  function openGeneratedSequence(eventKey) {
+    ui.selectedReviewKey = eventKey;
+    ui.selectedDay = '0';
+    location.hash = '/reviews';
   }
 
   function selectProgram(id) { ui.selectedProgramId = id; render(); }

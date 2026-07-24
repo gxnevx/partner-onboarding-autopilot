@@ -121,7 +121,7 @@ function simulateActivation(partnerId, programId, tier) {
       program_id: programId,
       approval_status: APPROVAL_STATUS.active,
       tier: tier || existing.tier || '',
-      date_status_changed: todayIso_(),
+      date_status_changed: nowIso_(),
       tracking_link:
         existing.tracking_link || buildTrackingLink_(program, partnerId),
       updated_at: nowIso_(),
@@ -145,5 +145,26 @@ function simulateActivation(partnerId, programId, tier) {
       processing,
       state: buildAppState_(),
     };
+  });
+}
+
+function resetEnrollmentForDemo(partnerId, programId) {
+  return withScriptLock_(() => {
+    const enrollmentId = `ENR-${programId}-${partnerId}`;
+    const enrollment = findById_(
+      'enrollments',
+      'enrollment_id',
+      enrollmentId,
+    );
+
+    if (!enrollment) {
+      throw new Error('Enrollment not found for this partner and program.');
+    }
+
+    enrollment.approval_status = APPROVAL_STATUS.pending;
+    enrollment.date_status_changed = nowIso_();
+    enrollment.updated_at = nowIso_();
+    upsertRow_('enrollments', 'enrollment_id', enrollment);
+    return buildAppState_();
   });
 }

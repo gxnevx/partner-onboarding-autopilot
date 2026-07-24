@@ -1,10 +1,12 @@
+<img src="docs/assets/partner-commerce-logo.png" alt="Partner Commerce" width="220">
+
 # Partner Onboarding Autopilot
 
 A working Google Apps Script prototype that turns a partner approval into a reviewable Day 0 / Day 3 / Day 7 onboarding sequence.
 
 The exercise asks for the logic behind the automation and the message strategy. This implementation keeps those two things visible: Google Sheets is the simulated operational source, Apps Script detects activation events and generates drafts, and the web app gives an operator a clear place to review the result.
 
-[Open the live demo](https://script.google.com/macros/s/AKfycbxdFvDc9Y8aTDCJowWKpH2dyBqKkL3bO-Zp0x61E59_4xTV3P0fcQJ4X6VLoFQX40KP9A/exec)
+[Open the live demo](https://script.google.com/macros/s/AKfycbyAssT3UF60uUIAwCse37_BAdnrb_ryXRoQR18wpkumnlb79VGodgBW9MUsGxxRHUwCpQ/exec)
 
 ![Email review workspace](docs/assets/email-review.png)
 
@@ -30,6 +32,17 @@ The web app has four separate work areas:
 4. **Email Reviews** — inspect the full sequence, switch between days, validate personalization, edit, and approve drafts.
 
 ![Activation control center](docs/assets/activations.png)
+
+## Run the simulation
+
+1. Open **Activations** and leave Ledgerly in **Automatic** mode.
+2. Choose a partner whose enrollment is `PENDING`.
+3. Confirm the commission tier.
+4. Click **Approve partner and run workflow**.
+5. The enrollment changes to `ACTIVE`, three drafts are created, and the app opens **Email Reviews** on Day 0.
+6. To repeat the demo, return to **Activations** and click **Reset selected partner to Pending** before approving again.
+
+In **Manual** mode, step 4 adds the activation to the queue instead. The operator must click **Generate drafts** before the sequence is created.
 
 ## The core decision
 
