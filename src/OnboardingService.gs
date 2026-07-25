@@ -306,3 +306,36 @@ function regenerateDraft(draftId) {
 function buildEventKey_(enrollment) {
   return `${enrollment.enrollment_id}|${enrollment.date_status_changed}`;
 }
+
+function repairStoredOperationalLinks_() {
+  const enrollments = indexBy_(readRows_('enrollments'), 'enrollment_id');
+  const programs = indexBy_(readRows_('programs'), 'program_id');
+  const resources = readRows_('resources');
+
+  readRows_('drafts').forEach(draft => {
+    if (![0, 3].includes(Number(draft.day))) {
+      return;
+    }
+
+    const enrollment = enrollments[draft.enrollment_id];
+    const program = programs[draft.program_id];
+    if (!enrollment || !program) {
+      return;
+    }
+
+    const programResources = resources.filter(
+      resource => resource.program_id === draft.program_id,
+    );
+    const repairedBody = enforceRequiredOperationalLinks_(
+      draft.body,
+      Number(draft.day),
+      { enrollment, program, resources: programResources },
+    );
+
+    if (repairedBody !== draft.body) {
+      draft.body = repairedBody;
+      draft.updated_at = nowIso_();
+      upsertRow_('drafts', 'draft_id', draft);
+    }
+  });
+}

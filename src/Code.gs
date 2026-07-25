@@ -11,5 +11,6 @@ function include(filename) {
 }
 
 function getAppState() {
+  repairStoredOperationalLinks_();
   return buildAppState_();
 }

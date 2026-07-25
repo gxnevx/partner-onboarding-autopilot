@@ -606,6 +606,12 @@
     const tier = program && enrollment
       ? (program.tiers || []).find(item => item.tier_name === enrollment.tier)
       : null;
+    const portalResource = program
+      ? (program.resources || []).find(item => item.resource_type === 'PORTAL')
+      : null;
+    const enablementResource = program
+      ? (program.resources || []).find(item => item.resource_type === 'ENABLEMENT')
+      : null;
     const common = [
       {
         label: 'Partner personalized',
@@ -640,15 +646,23 @@
           ),
         },
         {
-          label: 'Portal access included',
-          passed: body.includes('portal'),
+          label: 'Portal URL included',
+          passed: Boolean(
+            portalResource &&
+            portalResource.url &&
+            body.includes(String(portalResource.url).toLowerCase()),
+          ),
         },
       );
     } else if (String(draft.day) === '3') {
       common.push(
         {
-          label: 'Enablement resource included',
-          passed: body.includes('enablement'),
+          label: 'Enablement deck URL included',
+          passed: Boolean(
+            enablementResource &&
+            enablementResource.url &&
+            body.includes(String(enablementResource.url).toLowerCase()),
+          ),
         },
         {
           label: 'Deal registration action included',
